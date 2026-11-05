@@ -255,6 +255,9 @@ body.panel-open #feed { opacity: 0; pointer-events: none; transform: translateY(
 .bubble3d b { display: block; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: #047857; margin-bottom: 2px; }
 .bubble3d.thought b { color: var(--emerald-2); }
 @keyframes pop { from { opacity: 0; transform: translate(-50%, -80%) scale(.7); } }
+.tip3d { position: absolute; left: 0; top: 0; padding: 6px 10px; border-radius: 10px; background: rgba(12, 16, 15, .88); border: 1px solid var(--line-strong); color: var(--text-2); font-size: 11.5px; line-height: 1.3; pointer-events: none; opacity: 0; transition: opacity .15s ease; white-space: nowrap; box-shadow: var(--shadow); }
+.tip3d.show { opacity: 1; }
+.tip3d b { display: block; color: var(--text); font-size: 12.5px; font-weight: 600; }
 .room-label { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); font: 600 10.5px var(--display); letter-spacing: .14em; text-transform: uppercase; color: rgba(209, 250, 229, .75); text-shadow: 0 2px 8px rgba(0, 0, 0, .8); white-space: nowrap; pointer-events: none; }
 
 /* ---------- responsive ---------- */

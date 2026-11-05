@@ -195,7 +195,8 @@ export class Avatar {
   // ---------------------------------------------------------- movement
   walkTo(points, onArrive) {
     this.standUp();
-    this.path = points.map((p) => new THREE.Vector3(p.x, 0, p.z));
+    let y = this.root.position.y;
+    this.path = points.map((p) => { if (p.y !== undefined) y = p.y; return new THREE.Vector3(p.x, y, p.z); });
     this.onArrive = onArrive;
   }
   get walking() { return this.path.length > 0; }
@@ -203,7 +204,7 @@ export class Avatar {
   sitAt(seat) {
     this.seat = seat;
     this.seated = true;
-    this.root.position.set(seat.x, 0, seat.z);
+    this.root.position.set(seat.x, seat.y || 0, seat.z);
     this.heading = seat.heading;
   }
   standUp() { this.seated = false; }
@@ -220,14 +221,18 @@ export class Avatar {
     // follow path
     if (this.path.length) {
       const target = this.path[0];
-      const dx = target.x - p.x; const dz = target.z - p.z; const dist = Math.hypot(dx, dz);
+      const dx = target.x - p.x; const dy = target.y - p.y; const dz = target.z - p.z;
+      const dist = Math.hypot(dx, dy, dz);
       if (dist < 0.08) {
+        p.copy(target);
         this.path.shift();
         if (!this.path.length) { const cb = this.onArrive; this.onArrive = null; cb?.(); }
       } else {
-        const step = Math.min(dist, this.speed * dt);
-        p.x += (dx / dist) * step; p.z += (dz / dist) * step;
-        this.heading = Math.atan2(dx, dz);
+        // slower on stairs, so climbing reads clearly
+        const speed = Math.abs(dy) > 0.05 ? this.speed * 0.7 : this.speed;
+        const step = Math.min(dist, speed * dt);
+        p.x += (dx / dist) * step; p.y += (dy / dist) * step; p.z += (dz / dist) * step;
+        if (Math.hypot(dx, dz) > 0.02) this.heading = Math.atan2(dx, dz);
       }
     }
     // smooth heading
