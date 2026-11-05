@@ -6,7 +6,7 @@ NAFI AI OFFICE is an interactive 3D workspace built with Three.js. Four AI emplo
 
 ## Live deployment
 
-Production runs on Vercel at https://nafi-ai-office-eta.vercel.app. It's protected by Vercel Authentication and the owner access key. Pushes to `main` deploy automatically. See [Deploying](#deploying) for the limits of running on Vercel.
+Production runs on Vercel at https://nafi-ai-office-app.vercel.app. It's protected by Vercel Authentication and the owner access key. Pushes to `main` deploy automatically. See [Deploying](#deploying) for the limits of running on Vercel.
 
 ## Quick start
 
