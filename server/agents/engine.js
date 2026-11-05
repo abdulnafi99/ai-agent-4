@@ -6,7 +6,7 @@
 import { store, uid } from '../store.js';
 import { config } from '../config.js';
 import { AGENTS, AGENT_IDS, SHARED_PROTOCOL } from './definitions.js';
-import { generate, modelFor } from '../ai/providers.js';
+import { generate, modelFor, providerFor } from '../ai/providers.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const clip = (s, n) => (s && s.length > n ? s.slice(0, n) + ' …[truncated]' : s || '');
@@ -125,6 +125,7 @@ export class Engine {
       for (const [id, s] of Object.entries(patch.agents)) {
         if (!AGENTS[id]) continue;
         next.agents[id] = {
+          provider: ['', 'anthropic', 'openai', 'gemini'].includes(s.provider) ? s.provider : '',
           model: String(s.model || '').slice(0, 80),
           effort: ['', 'low', 'medium', 'high', 'xhigh', 'max'].includes(s.effort) ? s.effort : '',
           extra: String(s.extra || '').slice(0, 2000),
@@ -197,13 +198,13 @@ export class Engine {
     const system = `${AGENTS[agentId].prompt}\n${s.extra ? `\nAdditional instructions from the owner:\n${s.extra}\n` : ''}${SHARED_PROTOCOL}`;
     const prompt = this.buildPrompt(agentId, ctx);
     const res = await generate({
-      agentId, system, prompt, model: s.model || undefined, effort: s.effort || undefined,
+      agentId, system, prompt, provider: s.provider || undefined, model: s.model || undefined, effort: s.effort || undefined,
       context: { ...ctx, agentId, state: this.stateFor(agentId) },
     });
     const json = normalise(res.json);
     this.bumpStats(agentId, { turns: 1, tokensIn: res.usage.in, tokensOut: res.usage.out, totalLatency: res.latencyMs });
-    this.log(agentId, 'inference', `${nameOf(agentId)} completed a turn (${res.model}, ${res.latencyMs} ms)`, {
-      model: res.model, latencyMs: res.latencyMs, tokensIn: res.usage.in, tokensOut: res.usage.out,
+    this.log(agentId, 'inference', `${nameOf(agentId)} completed a turn (${res.provider} · ${res.model}, ${res.latencyMs} ms)`, {
+      provider: res.provider, model: res.model, latencyMs: res.latencyMs, tokensIn: res.usage.in, tokensOut: res.usage.out,
     });
     if (json.thought) this.setState(agentId, { thought: clip(json.thought, 240) });
     return { ...res, json };
@@ -524,6 +525,11 @@ export class Engine {
     const tasks = store.list('tasks');
     return {
       provider: modelFor('ceo'),
+      ai: Object.fromEntries(AGENT_IDS.map((id) => {
+        const o = this.agentSettings(id);
+        const p = providerFor(id, o.provider || undefined);
+        return [id, { provider: p, model: modelFor(id, o.model || undefined, p) }];
+      })),
       online: AGENT_IDS.length,
       activeTasks: tasks.filter((t) => OPEN.has(t.status)).length,
       completedProjects: store.list('projects', (p) => p.status === 'completed').length,
