@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0c0f0e">
+  <meta name="description" content="NAFI AI OFFICE — a living 3D workspace where four AI agents collaborate.">
+  <title>NAFI AI Office</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="/css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/vendor/three/build/three.module.js",
+      "three/addons/": "/vendor/three/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="scene" aria-label="3D office"></div>
+  <div id="overlay" aria-hidden="true"></div>
+
+  <!-- Loading / intro -->
+  <div id="loader">
+    <div class="loader-inner">
+      <div class="logo-mark big">N</div>
+      <h1>NAFI <span>AI OFFICE</span></h1>
+      <p id="loader-text">Powering up the office…</p>
+      <div class="loader-bar"><i></i></div>
+    </div>
+  </div>
+
+  <!-- Login -->
+  <div id="login" class="hidden">
+    <form class="glass login-card" id="login-form">
+      <div class="logo-mark">N</div>
+      <h2>Owner sign-in</h2>
+      <p class="muted" id="login-hint">Sign in to manage your AI company.</p>
+      <div id="login-fields"></div>
+      <p class="error" id="login-error"></p>
+    </form>
+  </div>
+
+  <!-- Top bar -->
+  <header id="topbar" class="glass">
+    <div class="brand"><div class="logo-mark">N</div><span>NAFI <b>AI OFFICE</b></span></div>
+    <nav id="nav" role="tablist">
+      <button data-view="office" class="active">Office</button>
+      <button data-view="agents">Agents</button>
+      <button data-view="tasks">Task Manager</button>
+      <button data-view="comms">Communication</button>
+      <button data-view="projects">Projects</button>
+      <button data-view="analytics">Analytics</button>
+      <button data-view="settings">Settings</button>
+    </nav>
+    <div class="top-actions">
+      <span id="provider-badge" class="badge">…</span>
+      <button id="btn-daynight" class="icon-btn" title="Day / night" aria-label="Toggle day and night">◐</button>
+      <button id="btn-menu" class="icon-btn mobile-only" aria-label="Menu">☰</button>
+    </div>
+  </header>
+
+  <!-- Command center metrics -->
+  <aside id="metrics" class="glass">
+    <div class="metrics-head"><span>Command Center</span><button id="metrics-toggle" class="icon-btn sm" aria-label="Collapse">–</button></div>
+    <div class="metrics-grid">
+      <div><b id="m-online">4</b><small>Agents online</small></div>
+      <div><b id="m-tasks">0</b><small>Active tasks</small></div>
+      <div><b id="m-projects">0</b><small>Projects done</small></div>
+      <div><b id="m-approvals">0</b><small>Approvals</small></div>
+      <div><b id="m-meetings">0</b><small>Meetings</small></div>
+    </div>
+    <div id="agent-chips"></div>
+    <div id="approvals-box"></div>
+  </aside>
+
+  <!-- Department quick jump -->
+  <div id="dept-jump" class="glass">
+    <button data-dept="overview" title="Overview">⌂</button>
+    <button data-dept="ceo" title="CEO Office">CEO</button>
+    <button data-dept="research" title="Research Lab">RES</button>
+    <button data-dept="development" title="Development Studio">DEV</button>
+    <button data-dept="social" title="Creative Studio">SOC</button>
+    <button data-dept="meeting" title="Meeting room">MTG</button>
+  </div>
+
+  <!-- Live feed -->
+  <div id="feed" class="glass">
+    <div class="feed-head"><span class="live-dot"></span> Live conversations</div>
+    <ul id="feed-list"></ul>
+  </div>
+
+  <!-- CEO command bar -->
+  <form id="command" class="glass" autocomplete="off">
+    <div id="ceo-reply" class="hidden"></div>
+    <div class="command-row">
+      <div class="ceo-avatar">CEO</div>
+      <input id="command-input" maxlength="4000" placeholder="Instruct the CEO… e.g. “Create a new website project”" aria-label="Instruction for CEO">
+      <button type="submit" class="btn primary">Send</button>
+    </div>
+    <div class="suggestions">
+      <button type="button">CEO, create a new website project for a Malaysian café.</button>
+      <button type="button">CEO, ask Research to analyse the Malaysian web app market.</button>
+      <button type="button">CEO, call a team meeting about our launch plan.</button>
+      <button type="button">CEO, ask Social Media to prepare a launch campaign.</button>
+    </div>
+  </form>
+
+  <!-- Side panel -->
+  <section id="panel" class="glass" aria-live="polite">
+    <div class="panel-head">
+      <h2 id="panel-title">Panel</h2>
+      <button id="panel-close" class="icon-btn" aria-label="Close panel">✕</button>
+    </div>
+    <div id="panel-body"></div>
+  </section>
+
+  <div id="modal" class="hidden" role="dialog" aria-modal="true">
+    <div class="modal-card glass">
+      <div class="panel-head"><h2 id="modal-title"></h2><button id="modal-close" class="icon-btn" aria-label="Close">✕</button></div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="toasts"></div>
+  <div id="hint" class="glass">Drag to orbit · scroll/pinch to zoom · click people, desks, screens or rooms</div>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

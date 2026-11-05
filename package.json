@@ -1,0 +1,24 @@
+{
+  "name": "nafi-ai-office",
+  "version": "1.0.0",
+  "description": "NAFI AI OFFICE - a living 3D autonomous multi-agent workspace",
+  "type": "module",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "check": "node --check server/index.js && node scripts/smoke.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.5.0",
+    "express": "^5.1.0",
+    "three": "^0.170.0"
+  },
+  "optionalDependencies": {
+    "firebase-admin": "^14.5.0"
+  },
+  "license": "MIT"
+}

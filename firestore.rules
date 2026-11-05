@@ -1,0 +1,10 @@
+rules_version = '2';
+// All reads and writes go through the NAFI AI OFFICE server (firebase-admin),
+// which bypasses these rules. Browsers never access Firestore directly.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
