@@ -86,6 +86,9 @@ export async function createApp() {
 
   app.use('/api', api);
   app.use(express.static(path.join(ROOT, 'public'), { extensions: ['html'], maxAge: '1h' }));
+  // On Vercel, public/ is served by the CDN and isn't visible to this function,
+  // so a request for "/" can reach Express. Send it to the static page.
+  app.get('/', (_req, res) => res.redirect(302, '/index.html'));
 
   app.use((err, _req, res, _next) => {
     res.status(err.status || 400).json({ error: err.message || 'Request failed' });
