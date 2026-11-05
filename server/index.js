@@ -85,7 +85,6 @@ export async function createApp() {
   });
 
   app.use('/api', api);
-  app.use('/vendor/three', express.static(path.join(ROOT, 'node_modules', 'three'), { maxAge: '7d', immutable: true }));
   app.use(express.static(path.join(ROOT, 'public'), { extensions: ['html'], maxAge: '1h' }));
 
   app.use((err, _req, res, _next) => {
