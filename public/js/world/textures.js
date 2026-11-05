@@ -1,0 +1,174 @@
+// Procedural canvas textures: live computer screens, boards, faces, windows.
+// Screens redraw at a low frame rate and reflect the owning agent's status.
+import * as THREE from 'three';
+
+function canvas(w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  return c;
+}
+
+function makeTex(c) {
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+const rnd = (seed) => { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; };
+
+// ---------------------------------------------------------------- screens
+export class Screen {
+  constructor(kind, accent = '#10b981', w = 256, h = 160) {
+    this.kind = kind; this.accent = accent;
+    this.c = canvas(w, h); this.ctx = this.c.getContext('2d');
+    this.texture = makeTex(this.c);
+    this.status = 'idle';
+    this.seed = Math.floor(Math.random() * 1e6) + 1;
+    this.draw(0);
+  }
+  draw(t) {
+    const { ctx, c } = this; const W = c.width; const H = c.height;
+    const active = ['working', 'thinking', 'talking', 'completed'].includes(this.status);
+    ctx.fillStyle = '#04110c'; ctx.fillRect(0, 0, W, H);
+    if (!active && this.kind !== 'wall') { this.screensaver(t); this.texture.needsUpdate = true; return; }
+    (this[this.kind] || this.dashboard).call(this, t, W, H);
+    if (this.status === 'error') {
+      ctx.fillStyle = 'rgba(248,113,113,.85)'; ctx.fillRect(0, H - 22, W, 22);
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.fillText('⚠ ERROR', 8, H - 6);
+    }
+    this.texture.needsUpdate = true;
+  }
+  screensaver(t) {
+    const { ctx, c } = this; const W = c.width; const H = c.height;
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, '#051a12'); g.addColorStop(1, '#0a0f0d'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const x = W / 2 + Math.sin(t * 0.4 + this.seed) * W * 0.25; const y = H / 2 + Math.cos(t * 0.33 + this.seed) * H * 0.2;
+    ctx.fillStyle = this.accent; ctx.globalAlpha = 0.9; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('NAFI', x, y); ctx.globalAlpha = 0.5; ctx.font = '10px sans-serif'; ctx.fillText('AI OFFICE', x, y + 14);
+    ctx.globalAlpha = 1; ctx.textAlign = 'left';
+  }
+  code(t, W, H) {
+    const { ctx } = this; const r = rnd(this.seed); const lh = 11; const scroll = (t * 26) % lh; const start = Math.floor(t * 26 / lh);
+    const colors = ['#c084fc', '#34d399', '#7dd3fc', '#fbbf24', '#f9a8d4', '#e5e7eb'];
+    ctx.fillStyle = '#0b0b16'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#151528'; ctx.fillRect(0, 0, 26, H);
+    for (let i = 0; i < H / lh + 2; i++) {
+      const ln = start + i; const rr = rnd(this.seed + ln * 97);
+      const indent = Math.floor(rr() * 4) * 10; let x = 32 + indent; const y = i * lh - scroll + 8;
+      ctx.fillStyle = '#4b4b6b'; ctx.fillRect(6, y, 12, 4);
+      const tokens = 1 + Math.floor(rr() * 5);
+      for (let k = 0; k < tokens; k++) { const w = 10 + rr() * 40; ctx.fillStyle = colors[Math.floor(rr() * colors.length)]; ctx.fillRect(x, y, w, 5); x += w + 6; if (x > W - 10) break; }
+    }
+    r();
+    ctx.fillStyle = this.accent; if (Math.floor(t * 2) % 2) ctx.fillRect(40, H - 14, 7, 9);
+  }
+  chart(t, W, H) {
+    const { ctx } = this;
+    ctx.fillStyle = '#061018'; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(125,211,252,.15)'; ctx.lineWidth = 1;
+    for (let y = 20; y < H; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2.5; ctx.beginPath();
+    for (let x = 0; x <= W; x += 6) { const y = H * 0.55 + Math.sin(x * 0.04 + t * 1.3 + this.seed) * 22 + Math.sin(x * 0.11 + t * 0.6) * 9; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.stroke();
+    for (let i = 0; i < 8; i++) { const h = 14 + Math.abs(Math.sin(i * 1.7 + t * 0.9)) * 36; ctx.fillStyle = i % 3 ? 'rgba(52,211,153,.75)' : 'rgba(56,189,248,.8)'; ctx.fillRect(10 + i * 18, H - 8 - h, 11, h); }
+    ctx.fillStyle = '#e0f2fe'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('MARKET INSIGHTS', 10, 15);
+  }
+  social(t, W, H) {
+    const { ctx } = this;
+    ctx.fillStyle = '#16060f'; ctx.fillRect(0, 0, W, H);
+    const off = (t * 18) % 70;
+    for (let i = -1; i < 4; i++) {
+      const y = i * 70 - off + 10;
+      ctx.fillStyle = '#2a0f1f'; ctx.fillRect(10, y, W - 20, 60);
+      ctx.fillStyle = ['#f472b6', '#fb923c', '#a78bfa', '#34d399'][(i + 8 + Math.floor(t * 18 / 70)) % 4]; ctx.fillRect(16, y + 6, 48, 48);
+      ctx.fillStyle = '#fbcfe8'; ctx.fillRect(72, y + 10, 90, 6); ctx.fillStyle = '#9d5a7c'; ctx.fillRect(72, y + 22, 120, 5); ctx.fillRect(72, y + 32, 70, 5);
+      ctx.fillStyle = '#f472b6'; ctx.font = '12px sans-serif'; ctx.fillText(`♥ ${(1200 + Math.floor(t * 7) + i * 311) % 9999}`, 72, y + 52);
+    }
+  }
+  dashboard(t, W, H) {
+    const { ctx } = this;
+    ctx.fillStyle = '#04120d'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#a7f3d0'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('EXECUTIVE DASHBOARD', 10, 16);
+    const kpis = [['Revenue', '+12%'], ['Tasks', `${(Math.floor(t / 3) % 9) + 3}`], ['Team', '4/4']];
+    kpis.forEach(([k, v], i) => { const x = 10 + i * ((W - 20) / 3); ctx.fillStyle = '#0b2a1f'; ctx.fillRect(x, 26, (W - 20) / 3 - 6, 40); ctx.fillStyle = '#6ee7b7'; ctx.font = '10px sans-serif'; ctx.fillText(k, x + 6, 40); ctx.fillStyle = '#ecfdf5'; ctx.font = 'bold 16px sans-serif'; ctx.fillText(v, x + 6, 60); });
+    ctx.strokeStyle = this.accent; ctx.lineWidth = 2; ctx.beginPath();
+    for (let x = 10; x < W - 10; x += 5) { const y = H - 30 - (x / W) * 40 - Math.sin(x * 0.08 + t) * 6; x === 10 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    ctx.stroke();
+  }
+  wall(t, W, H) { (this.sub ? this[this.sub] : this.dashboard).call(this, t, W, H); }
+}
+
+// ---------------------------------------------------------------- boards
+export function boardTexture(kind, accent) {
+  const c = canvas(512, 256); const ctx = c.getContext('2d');
+  ctx.fillStyle = '#f4f7f5'; ctx.fillRect(0, 0, 512, 256);
+  ctx.fillStyle = '#1f2937'; ctx.font = 'bold 22px sans-serif';
+  const titles = { research: 'RESEARCH BOARD', development: 'SPRINT BOARD', social: 'CONTENT CALENDAR', ceo: 'STRATEGY 2026' };
+  ctx.fillText(titles[kind] || 'BOARD', 18, 32);
+  const r = rnd(kind.length * 991);
+  const notes = ['#fde68a', '#a7f3d0', '#bfdbfe', '#fbcfe8', '#ddd6fe'];
+  if (kind === 'development') {
+    ['TODO', 'DOING', 'REVIEW', 'DONE'].forEach((col, i) => {
+      ctx.fillStyle = '#6b7280'; ctx.font = 'bold 13px sans-serif'; ctx.fillText(col, 18 + i * 124, 58);
+      for (let k = 0; k < 3; k++) { ctx.fillStyle = notes[(i + k) % 5]; ctx.fillRect(18 + i * 124, 68 + k * 58, 106, 48); ctx.fillStyle = '#374151'; ctx.fillRect(26 + i * 124, 80 + k * 58, 70 * r() + 20, 5); ctx.fillRect(26 + i * 124, 92 + k * 58, 50 * r() + 20, 5); }
+    });
+  } else if (kind === 'social') {
+    const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    days.forEach((d, i) => { ctx.fillStyle = '#6b7280'; ctx.font = 'bold 12px sans-serif'; ctx.fillText(d, 22 + i * 70, 60); ctx.strokeStyle = '#d1d5db'; ctx.strokeRect(16 + i * 70, 66, 64, 170); if (r() > 0.25) { ctx.fillStyle = notes[i % 5]; ctx.fillRect(20 + i * 70, 72 + r() * 90, 56, 44); } });
+  } else {
+    for (let i = 0; i < 9; i++) { ctx.fillStyle = notes[i % 5]; const x = 18 + (i % 5) * 98; const y = 52 + Math.floor(i / 5) * 100; ctx.save(); ctx.translate(x + 40, y + 40); ctx.rotate((r() - 0.5) * 0.12); ctx.fillRect(-40, -40, 84, 80); ctx.fillStyle = '#374151'; ctx.fillRect(-32, -26, 60, 5); ctx.fillRect(-32, -14, 44, 5); ctx.restore(); }
+    ctx.strokeStyle = accent; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(100, 140); ctx.bezierCurveTo(200, 100, 260, 200, 400, 150); ctx.stroke();
+  }
+  return makeTex(c);
+}
+
+export function signTexture(text, sub, accent = '#34d399') {
+  const c = canvas(512, 128); const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, 512, 128);
+  ctx.fillStyle = accent; ctx.font = 'bold 54px "Space Grotesk", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(text, 256, 66);
+  if (sub) { ctx.fillStyle = '#d1fae5'; ctx.font = '600 22px sans-serif'; ctx.fillText(sub, 256, 104); }
+  return makeTex(c);
+}
+
+export function cityTexture() {
+  const c = canvas(256, 128); const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 128); g.addColorStop(0, '#0b1220'); g.addColorStop(1, '#162238');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 256, 128);
+  const r = rnd(42);
+  for (let x = 0; x < 256;) {
+    const w = 10 + r() * 22; const h = 30 + r() * 80; ctx.fillStyle = '#0a0f1a'; ctx.fillRect(x, 128 - h, w, h);
+    for (let wy = 128 - h + 4; wy < 124; wy += 7) for (let wx = x + 2; wx < x + w - 3; wx += 5) if (r() > 0.55) { ctx.fillStyle = r() > 0.8 ? '#fde68a' : '#fbbf24'; ctx.fillRect(wx, wy, 2, 3); }
+    x += w + 2;
+  }
+  return makeTex(c);
+}
+
+// ---------------------------------------------------------------- faces
+export function faceTextures(skin, { glasses = false, lashes = false, beard = false } = {}) {
+  const make = (mode) => {
+    const c = canvas(128, 128); const ctx = c.getContext('2d');
+    ctx.fillStyle = skin; ctx.fillRect(0, 0, 128, 128);
+    // eyes
+    ctx.fillStyle = '#1b1b1f';
+    if (mode === 'blink') { ctx.fillRect(34, 58, 18, 4); ctx.fillRect(76, 58, 18, 4); }
+    else {
+      ctx.beginPath(); ctx.ellipse(43, 58, 7, 9, 0, 0, Math.PI * 2); ctx.ellipse(85, 58, 7, 9, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(45, 55, 2.5, 0, 7); ctx.arc(87, 55, 2.5, 0, 7); ctx.fill();
+    }
+    if (lashes && mode !== 'blink') { ctx.strokeStyle = '#1b1b1f'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(34, 49); ctx.lineTo(30, 45); ctx.moveTo(94, 49); ctx.lineTo(98, 45); ctx.stroke(); }
+    // brows
+    ctx.strokeStyle = 'rgba(30,20,15,.75)'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(34, 42); ctx.lineTo(52, 40); ctx.moveTo(76, 40); ctx.lineTo(94, 42); ctx.stroke();
+    // blush
+    ctx.fillStyle = 'rgba(244,114,182,.28)'; ctx.beginPath(); ctx.arc(30, 76, 8, 0, 7); ctx.arc(98, 76, 8, 0, 7); ctx.fill();
+    // mouth
+    ctx.strokeStyle = '#5b2b22'; ctx.fillStyle = '#5b2b22'; ctx.lineWidth = 4;
+    if (mode === 'talk') { ctx.beginPath(); ctx.ellipse(64, 88, 10, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#e88a8a'; ctx.beginPath(); ctx.ellipse(64, 92, 6, 3, 0, 0, Math.PI * 2); ctx.fill(); }
+    else { ctx.beginPath(); ctx.arc(64, 78, 14, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke(); }
+    if (beard) { ctx.fillStyle = 'rgba(40,28,22,.35)'; ctx.beginPath(); ctx.ellipse(64, 104, 30, 16, 0, 0, Math.PI); ctx.fill(); }
+    if (glasses) { ctx.strokeStyle = '#111827'; ctx.lineWidth = 3.5; ctx.strokeRect(29, 47, 28, 22); ctx.strokeRect(71, 47, 28, 22); ctx.beginPath(); ctx.moveTo(57, 56); ctx.lineTo(71, 56); ctx.stroke(); }
+    return makeTex(c);
+  };
+  return { normal: make('normal'), talk: make('talk'), blink: make('blink') };
+}
