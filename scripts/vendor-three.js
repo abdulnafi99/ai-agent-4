@@ -1,6 +1,7 @@
-// Copies the parts of Three.js the browser needs into public/vendor/three so
-// they can be served as static files (required on Vercel, where the CDN
-// serves public/ and Express static middleware is not used).
+// Copies the parts of Three.js the browser needs into public/vendor/three.
+// The copies are committed so every host (including Vercel's CDN, which only
+// serves files present in the repository's public/ folder) can serve them.
+// Run `npm run vendor` after upgrading the three package.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

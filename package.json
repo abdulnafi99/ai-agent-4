@@ -11,8 +11,7 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "check": "node --check server/index.js && node scripts/smoke.js",
-    "build": "node scripts/vendor-three.js",
-    "postinstall": "node scripts/vendor-three.js"
+    "vendor": "node scripts/vendor-three.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.5.0",
