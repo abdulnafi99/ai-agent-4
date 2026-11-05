@@ -4,6 +4,10 @@
 
 NAFI AI OFFICE is an interactive 3D workspace built with Three.js. Four AI employees (a CEO, a Research specialist, a Lead Developer and a Social Media specialist) each run on their own system prompt. They talk to each other through a shared message bus, hand each other tasks through a central task queue, meet in a glass meeting room and report back to you. Their 3D avatars show what they are actually doing: typing while they work, thinking, walking between departments, sitting in meetings, celebrating when they finish and showing a warning when something fails.
 
+## Live deployment
+
+Production runs on Vercel at https://nafi-ai-office-eta.vercel.app. It's protected by Vercel Authentication and the owner access key. Pushes to `main` deploy automatically. See [Deploying](#deploying) for the limits of running on Vercel.
+
 ## Quick start
 
 ```bash
@@ -80,6 +84,7 @@ See `.env.example` for every option.
 
 ## Deploying
 
+- **Vercel:** the repository deploys as-is (Express preset). Set `OWNER_ACCESS_KEY` and, for real AI, `ANTHROPIC_API_KEY` in the project's environment variables. Vercel runs the app as a function it can pause or recycle, so history in `/tmp` isn't durable (use `STORAGE=firestore`), and agents only keep working while someone has the page open.
 - **Any Node host / Cloud Run:** `docker build -t nafi-office . && docker run -p 8080:8080 --env-file .env nafi-office`
 - **Firestore:** create a Firebase project, enable Firestore and Authentication, download a service-account key, set `STORAGE=firestore`, `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_WEB_CONFIG` and `OWNER_EMAILS`, then run `firebase deploy --only firestore:rules`.
 
