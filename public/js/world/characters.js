@@ -8,6 +8,7 @@ const STYLES = {
   ceo: { skin: '#d9a37a', shirt: '#1f2a44', pants: '#1c1f24', shoes: '#0b0b0b', hair: '#1a1410', face: { beard: true } },
   research: { skin: '#b97a56', shirt: '#f8fafc', pants: '#334155', shoes: '#1e293b', hair: '#2b1d16', face: { glasses: true, lashes: true } },
   development: { skin: '#f1c7a0', shirt: '#6d28d9', pants: '#1e3a8a', shoes: '#f5f5f5', hair: '#3b2a1e', face: {} },
+  security: { skin: '#c99068', shirt: '#1c1917', pants: '#292524', shoes: '#0c0a09', hair: '#1a120c', face: { lashes: true } },
   social: { skin: '#e0ac85', shirt: '#db2777', pants: '#f5f5f4', shoes: '#be185d', hair: '#5a2d1a', face: { lashes: true } },
 };
 
@@ -107,6 +108,20 @@ export class Avatar {
       }
       part(new THREE.BoxGeometry(0.5, 0.22, 0.12), m('#5b21b6'), this.torso, 0, 0.62, -0.2); // hood
       part(new THREE.BoxGeometry(0.3, 0.12, 0.02), m('#ede9fe'), this.torso, 0, 0.3, 0.176); // logo
+    } else if (this.id === 'security') {
+      part(new THREE.BoxGeometry(0.56, 0.14, 0.54), hair, h, 0, 0.56, -0.01);
+      part(new THREE.BoxGeometry(0.56, 0.42, 0.12), hair, h, 0, 0.34, -0.23);
+      part(new THREE.BoxGeometry(0.14, 0.42, 0.14), hair, h, 0, 0.12, -0.32); // ponytail
+      // headset with boom mic
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.03, 6, 20, Math.PI), m('#0c0a09'));
+      band.position.set(0, 0.3, 0); h.add(band);
+      const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.07, 12), m('#fb923c', { emissive: '#c2410c', emissiveIntensity: 0.4 }));
+      cup.rotation.z = Math.PI / 2; cup.position.set(0.29, 0.27, 0); h.add(cup);
+      part(new THREE.BoxGeometry(0.03, 0.03, 0.22), m('#0c0a09'), h, 0.27, 0.15, 0.12);
+      // jacket trim and badge
+      part(new THREE.BoxGeometry(0.06, 0.66, 0.02), m('#fb923c'), this.torso, -0.13, 0.36, 0.176);
+      part(new THREE.BoxGeometry(0.06, 0.66, 0.02), m('#fb923c'), this.torso, 0.13, 0.36, 0.176);
+      part(new THREE.BoxGeometry(0.12, 0.08, 0.02), m('#fde68a', { metalness: 0.6 }), this.torso, -0.22, 0.56, 0.18);
     } else if (this.id === 'social') {
       part(new THREE.BoxGeometry(0.56, 0.14, 0.54), hair, h, 0, 0.56, -0.01);
       part(new THREE.BoxGeometry(0.58, 0.62, 0.14), hair, h, 0, 0.22, -0.23);
