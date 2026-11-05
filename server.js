@@ -1,6 +1,3 @@
-// Entry point for Vercel's Express support: exports the configured app.
-// Locally, use `npm start` (server/index.js), which also calls listen().
-import { createApp } from './server/index.js';
-
-const app = await createApp();
-export default app;
+// Entry point for Vercel's Express support. The app is created in
+// server/index.js; locally, use `npm start`.
+export { default } from './server/index.js';
