@@ -4,14 +4,20 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { Office, ROOMS, DESKS, DOORS, MEETING_SEATS, AMBIENT_SPOTS, FOCUS } from './office.js';
+import { Office, ROOMS, DESKS, DOORS, MEETING_SEATS, AMBIENT_SPOTS, FOCUS, LEVEL_Y, WALK_Z, STAIR, TABLE } from './office.js';
 
-function roomAt(x, z) {
+const levelOf = (y) => (y > LEVEL_Y / 2 ? 1 : 0);
+// Which room a point is in. Open areas are 'corridor' (ground) or 'walkway' (mezzanine).
+function roomAt(x, y, z) {
+  const lvl = levelOf(y);
   for (const [id, r] of Object.entries(ROOMS)) {
-    if (id !== 'lobby' && x > r.x[0] && x < r.x[1] && z > r.z[0] && z < r.z[1]) return id;
+    if (id !== 'lobby' && (r.level || 0) === lvl && x > r.x[0] && x < r.x[1] && z > r.z[0] && z < r.z[1]) return id;
   }
-  return 'corridor';
+  return lvl ? 'walkway' : 'corridor';
 }
+const roomLevel = (room) => (room === 'walkway' ? 1 : room === 'corridor' ? 0 : ROOMS[room]?.level || 0);
+// Points on the open "hub" of each floor that connect every door.
+const hub = (lvl, x) => (lvl ? { x, y: LEVEL_Y, z: WALK_Z } : { x, y: 0, z: 0 });
 import { Avatar } from './characters.js';
 
 const AGENT_IDS = Object.keys(DESKS);
@@ -21,8 +27,8 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 // Path around an agent's desk: behind the chair -> desk side -> in front of desk.
 function deskAisle(id) {
   const d = DESKS[id]; const fwd = d.heading === 0 ? 1 : -1; const deskZ = d.z + fwd * 0.95;
-  const side = d.x + 2.1;
-  return [{ x: d.x, z: d.z - fwd * 0.45 }, { x: side, z: d.z - fwd * 0.45 }, { x: side, z: deskZ + fwd * 0.9 }];
+  const side = d.x + 2.1; const y = d.y || 0;
+  return [{ x: d.x, y, z: d.z - fwd * 0.45 }, { x: side, y, z: d.z - fwd * 0.45 }, { x: side, y, z: deskZ + fwd * 0.9 }];
 }
 
 export function detectQuality() {
@@ -168,6 +174,7 @@ export class World {
       return o ? o.userData.click : null;
     };
     el.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+    el.addEventListener('pointerleave', () => this.showTooltip(null));
     el.addEventListener('pointerup', (e) => {
       if (!down) return;
       const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
@@ -181,12 +188,34 @@ export class World {
     el.addEventListener('pointermove', (e) => {
       if (e.pointerType !== 'mouse' || down) return;
       const now = performance.now(); if (now - hoverT < 80) return; hoverT = now;
-      el.style.cursor = pick(e) ? 'pointer' : 'grab';
+      const hit = pick(e);
+      el.style.cursor = hit ? 'pointer' : 'grab';
+      this.showTooltip(hit, e.clientX, e.clientY);
     });
     // keyboard panning
     this.keys = new Set();
     window.addEventListener('keydown', (e) => { if (!/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) this.keys.add(e.key.toLowerCase()); });
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
+  }
+
+  // Small label next to the cursor naming what a click would open.
+  showTooltip(hit, x, y) {
+    if (!this.tooltip) { this.tooltip = document.createElement('div'); this.tooltip.className = 'tip3d'; this.overlay.appendChild(this.tooltip); }
+    const tip = this.tooltip;
+    if (!hit) { tip.classList.remove('show'); return; }
+    const name = (id) => this.getAgent(id)?.name || id;
+    const dept = { ceo: 'CEO Office', research: 'Research Lab', development: 'Development Studio', social: 'Creative Studio', security: 'Security Ops Centre' };
+    const text = {
+      agent: () => `<b>${esc(name(hit.id))}</b>Open profile`,
+      desk: () => `<b>${esc(name(hit.id))}'s desk</b>View tasks`,
+      computer: () => `<b>${esc(name(hit.id))}'s computer</b>Open workspace`,
+      meeting: () => '<b>Meeting room</b>Start an AI meeting',
+      department: () => `<b>${esc(dept[hit.id] || hit.id)}</b>Go to department`,
+    }[hit.type]?.();
+    if (!text) { tip.classList.remove('show'); return; }
+    if (tip._html !== text) { tip.innerHTML = text; tip._html = text; }
+    tip.style.transform = `translate(${x + 16}px, ${y + 14}px)`;
+    tip.classList.add('show');
   }
 
   resize() {
@@ -239,7 +268,7 @@ export class World {
     if (Math.abs(prev - this.day) < 1e-4 && this._dayApplied) return;
     this._dayApplied = true;
     const d = this.day;
-    const sky = new THREE.Color('#06090f').lerp(new THREE.Color('#a3aebb'), d);
+    const sky = new THREE.Color('#14161c').lerp(new THREE.Color('#d6c6a3'), d);
     this.scene.background.copy(sky);
     this.scene.fog.color.copy(sky);
     this.hemi.intensity = 0.55 + d * 0.45;
@@ -254,27 +283,38 @@ export class World {
   // ---------------------------------------------------------- director
   status(id) { return this.actors[id]?.status || 'idle'; }
 
+  // Plan a path between any two places, using doors, each floor's hub line
+  // and the bleacher stairs when the floors differ.
   routeTo(actor, room, target) {
     const av = actor.avatar;
     const pts = [];
     const p = av.root.position;
-    const cur = roomAt(p.x, p.z);
-    const corridor = (x) => ({ x, z: 0 });
+    const cur = roomAt(p.x, p.y, p.z);
     const via = (r) => {
       const d = DOORS[r]; if (!d) return null;
-      const north = d.z < 0; // door on a top room (rooms extend to -z)
-      return { inside: { x: d.x, z: d.z + (north ? -1.3 : 1.3) }, outside: { x: d.x, z: d.z + (north ? 1.3 : -1.3) } };
+      const north = d.z < 0;
+      return { inside: { x: d.x, y: d.y, z: d.z + (north ? -1.3 : 1.3) }, outside: { x: d.x, y: d.y, z: d.z + (north ? 1.2 : -1.3) } };
     };
     if (cur !== room) {
       const a = via(cur);
-      if (a) { pts.push(a.inside, a.outside, corridor(a.outside.x)); } else pts.push(corridor(p.x));
+      let lvl = roomLevel(cur);
+      let x = p.x;
+      if (a) { pts.push(a.inside, a.outside); x = a.outside.x; }
+      pts.push(hub(lvl, x));
+      const want = roomLevel(room);
+      if (lvl !== want) {
+        const [from, to] = lvl === 0 ? [STAIR.bottom, STAIR.top] : [STAIR.top, STAIR.bottom];
+        pts.push(hub(lvl, from.x), from, to, hub(want, to.x));
+        lvl = want;
+      }
       const b = via(room);
-      if (b) pts.push(corridor(b.outside.x), b.outside, b.inside);
-      else pts.push(corridor(target.x));
-    } else if (room === 'corridor') {
-      pts.push(corridor(p.x), corridor(target.x));
+      if (b) pts.push(hub(lvl, b.outside.x), b.outside, b.inside);
+      else pts.push(hub(lvl, target.x));
+    } else if (room === 'corridor' || room === 'walkway') {
+      const lvl = roomLevel(room);
+      pts.push(hub(lvl, p.x), hub(lvl, target.x));
     }
-    pts.push(target);
+    pts.push({ y: roomLevel(room) ? LEVEL_Y : 0, ...target });
     actor.room = room;
     return pts;
   }
@@ -284,7 +324,7 @@ export class World {
     const av = actor.avatar; const d = DESKS[actor.id];
     if (!av.seated || Math.hypot(av.root.position.x - d.x, av.root.position.z - d.z) > 0.3) return [];
     const pts = deskAisle(actor.id);
-    av.root.position.set(d.x, 0, d.z);
+    av.root.position.set(d.x, d.y || 0, d.z);
     return pts;
   }
 
@@ -295,7 +335,7 @@ export class World {
     if (actor.location === 'to-desk') return;
     actor.location = 'to-desk';
     const around = deskAisle(actor.id).reverse();
-    av.walkTo(this.routeTo(actor, desk.room, around[0]).concat(around.slice(1), [{ x: desk.x, z: desk.z }]), () => {
+    av.walkTo(this.routeTo(actor, desk.room, around[0]).concat(around.slice(1), [{ x: desk.x, y: desk.y || 0, z: desk.z }]), () => {
       av.sitAt(desk);
       actor.location = 'desk';
       then?.();
@@ -308,11 +348,12 @@ export class World {
     actor.location = 'to-meeting';
     const av = actor.avatar;
     // Walk around the table rather than through it.
+    const y = seat.y; const near = TABLE.z + 3.3; // just inside the door, in front of the table
     let approach;
-    if (seat.heading === 0) approach = [{ x: -6.4, z: -8.1 }, { x: -6.4, z: -14.5 }, { x: seat.x, z: -14.5 }];
-    else if (seat.heading === Math.PI) approach = [{ x: seat.x, z: -7.9 }];
-    else approach = [{ x: seat.x + (seat.x < -3 ? -0.9 : 0.9), z: -8.1 }, { x: seat.x + (seat.x < -3 ? -0.9 : 0.9), z: seat.z }];
-    const route = this.exitDesk(actor).concat(this.routeTo(actor, 'meeting', approach[0])).concat(approach.slice(1), [{ x: seat.x, z: seat.z }]);
+    if (seat.heading === 0) approach = [{ x: TABLE.x - 3.4, y, z: near }, { x: TABLE.x - 3.4, y, z: seat.z - 0.7 }, { x: seat.x, y, z: seat.z - 0.7 }];
+    else if (seat.heading === Math.PI) approach = [{ x: seat.x, y, z: near }];
+    else { const sx = seat.x + (seat.x < TABLE.x ? -0.9 : 0.9); approach = [{ x: sx, y, z: near }, { x: sx, y, z: seat.z }]; }
+    const route = this.exitDesk(actor).concat(this.routeTo(actor, 'meeting', approach[0])).concat(approach.slice(1), [{ x: seat.x, y, z: seat.z }]);
     av.walkTo(route, () => {
       av.sitAt(seat);
       actor.location = 'meeting';
@@ -486,7 +527,7 @@ export class World {
       if (mv.lengthSq()) { mv.normalize().multiplyScalar(dt * 14); this.controls.target.add(mv); this.camera.position.add(mv); this.follow = null; }
     }
     const tg = this.controls.target;
-    tg.x = THREE.MathUtils.clamp(tg.x, -24, 24); tg.z = THREE.MathUtils.clamp(tg.z, -18, 18); tg.y = THREE.MathUtils.clamp(tg.y, 0, 3);
+    tg.x = THREE.MathUtils.clamp(tg.x, -24, 24); tg.z = THREE.MathUtils.clamp(tg.z, -18, 18); tg.y = THREE.MathUtils.clamp(tg.y, 0, LEVEL_Y + 1);
     this.controls.update();
 
     this.updateDaylight(dt, t);

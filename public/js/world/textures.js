@@ -148,6 +148,27 @@ export function signTexture(text, sub, accent = '#34d399') {
   return makeTex(c);
 }
 
+// Framed poster with bold lines of text, e.g. "DO IT NOW!".
+export function posterTexture(lines, bg = '#d98463', fg = '#fff7ed') {
+  const c = canvas(256, 320); const ctx = c.getContext('2d');
+  ctx.fillStyle = '#1f2125'; ctx.fillRect(0, 0, 256, 320);
+  ctx.fillStyle = bg; ctx.fillRect(14, 14, 228, 292);
+  ctx.fillStyle = fg; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 40px "Space Grotesk", sans-serif';
+  const top = 160 - ((lines.length - 1) * 46) / 2;
+  lines.forEach((l, i) => ctx.fillText(l, 128, top + i * 46));
+  return makeTex(c);
+}
+
+// Wide wall lettering on a transparent background.
+export function letteringTexture(text, color = '#ffffff', size = 64) {
+  const c = canvas(1024, 128); const ctx = c.getContext('2d');
+  ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `600 ${size}px "Space Grotesk", sans-serif`;
+  ctx.fillText(text, 512, 66);
+  return makeTex(c);
+}
+
 export function cityTexture() {
   const c = canvas(256, 128); const ctx = c.getContext('2d');
   const g = ctx.createLinearGradient(0, 0, 0, 128); g.addColorStop(0, '#0b1220'); g.addColorStop(1, '#162238');
