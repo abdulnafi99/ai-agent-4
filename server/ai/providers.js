@@ -1,7 +1,7 @@
 // AI provider adapters. Each returns { json, text, usage, model, latencyMs }.
 // API keys are read from the server environment only.
 import Anthropic from '@anthropic-ai/sdk';
-import { config } from '../config.js';
+import { config, PROVIDERS } from '../config.js';
 import { RESPONSE_SCHEMA } from '../agents/definitions.js';
 import { demoRespond } from './demo.js';
 
@@ -91,25 +91,44 @@ async function callGemini({ system, prompt, model }) {
   return { text, json: extractJson(text), model, usage: { in: data.usageMetadata?.promptTokenCount || 0, out: data.usageMetadata?.candidatesTokenCount || 0 } };
 }
 
-export function modelFor(agentId, override) {
+/**
+ * Which AI provider an agent uses: the owner's override from Settings, then
+ * AGENT_PROVIDER_<ID>, then the default provider.
+ */
+export function providerFor(agentId, override) {
+  const p = override || config.agentProviders[agentId] || config.provider;
+  return PROVIDERS.includes(p) ? p : 'demo';
+}
+
+/** The model an agent uses on its provider. */
+export function modelFor(agentId, override, provider = providerFor(agentId)) {
   if (override) return override;
   if (config.agentModels[agentId]) return config.agentModels[agentId];
-  return config.models[config.provider] || 'demo';
+  return config.models[provider] || 'demo';
 }
+
+const KEY_ENV = { anthropic: 'ANTHROPIC_API_KEY', openai: 'OPENAI_API_KEY', gemini: 'GEMINI_API_KEY' };
 
 /**
  * Run one inference for an agent.
- * @param {{agentId:string, system:string, prompt:string, model?:string, effort?:string, context:object}} req
+ * @param {{agentId:string, system:string, prompt:string, provider?:string, model?:string, effort?:string, context:object}} req
  */
 export async function generate(req) {
   const started = Date.now();
-  const model = modelFor(req.agentId, req.model);
+  const provider = providerFor(req.agentId, req.provider);
+  const model = modelFor(req.agentId, req.model, provider);
+  const hasKey = provider === 'anthropic'
+    ? process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN
+    : process.env[KEY_ENV[provider]];
+  if (provider !== 'demo' && !hasKey) {
+    throw new Error(`${req.agentId} is set to use ${provider}, but ${KEY_ENV[provider]} is not configured on the server`);
+  }
   let out;
-  switch (config.provider) {
+  switch (provider) {
     case 'anthropic': out = await callAnthropic({ ...req, model }); break;
     case 'openai': out = await callOpenAI({ ...req, model }); break;
     case 'gemini': out = await callGemini({ ...req, model }); break;
     default: out = await demoRespond(req); break;
   }
-  return { ...out, latencyMs: Date.now() - started };
+  return { ...out, provider, latencyMs: Date.now() - started };
 }

@@ -36,8 +36,8 @@ export const config = {
   provider: detectProvider(),
   models: {
     anthropic: env.ANTHROPIC_MODEL || 'claude-opus-5-5',
-    openai: env.OPENAI_MODEL || 'gpt-4o-mini',
-    gemini: env.GEMINI_MODEL || 'gemini-2.0-flash',
+    openai: env.OPENAI_MODEL || 'gpt-5-mini',
+    gemini: env.GEMINI_MODEL || 'gemini-2.5-flash',
   },
   // Optional per-agent model overrides, e.g. AGENT_MODEL_RESEARCH=claude-sonnet-5-5
   agentModels: {
@@ -45,6 +45,14 @@ export const config = {
     research: env.AGENT_MODEL_RESEARCH,
     development: env.AGENT_MODEL_DEVELOPMENT,
     social: env.AGENT_MODEL_SOCIAL,
+  },
+  // Optional per-agent AI provider, e.g. AGENT_PROVIDER_RESEARCH=gemini.
+  // Agents without one use the default provider above.
+  agentProviders: {
+    ceo: env.AGENT_PROVIDER_CEO?.toLowerCase(),
+    research: env.AGENT_PROVIDER_RESEARCH?.toLowerCase(),
+    development: env.AGENT_PROVIDER_DEVELOPMENT?.toLowerCase(),
+    social: env.AGENT_PROVIDER_SOCIAL?.toLowerCase(),
   },
   anthropicEffort: env.ANTHROPIC_EFFORT || 'medium',
   openaiBaseUrl: env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
@@ -66,10 +74,19 @@ export const config = {
   turnDelayMs: Number(env.TURN_DELAY_MS || 900),
 };
 
+export const PROVIDERS = ['anthropic', 'openai', 'gemini'];
+
+/** Providers whose API key is configured on the server. */
+export function availableProviders() {
+  return PROVIDERS.filter((p) => (p === 'anthropic' ? env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN : p === 'openai' ? env.OPENAI_API_KEY : env.GEMINI_API_KEY));
+}
+
 export function publicConfig() {
+  const usesAi = config.provider !== 'demo' || Object.values(config.agentProviders).some(Boolean);
   return {
     provider: config.provider,
-    demo: config.provider === 'demo',
+    demo: !usesAi,
+    available: availableProviders(),
     auth: config.firebaseWebConfig ? 'firebase' : config.ownerKey ? 'key' : 'none',
     firebase: config.firebaseWebConfig, // Firebase web config is public by design
     storage: config.storage,

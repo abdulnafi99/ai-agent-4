@@ -64,7 +64,7 @@ async function start() {
   const config = await getConfig();
   state.config = config;
   const badge = $('#provider-badge');
-  badge.textContent = config.demo ? 'DEMO MODE' : `LIVE · ${config.provider.toUpperCase()}`;
+  badge.textContent = config.demo ? 'DEMO MODE' : 'LIVE AI';
   badge.className = `badge ${config.demo ? 'warn' : 'ok'}`;
   badge.title = config.demo ? 'No AI provider key configured on the server: agents use templated demo responses. Set ANTHROPIC_API_KEY for real inference.' : 'Agents run real AI inference';
 

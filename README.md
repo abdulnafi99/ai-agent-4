@@ -76,7 +76,8 @@ See `.env.example` for every option.
 
 | Area | Options |
 |---|---|
-| AI provider | `ANTHROPIC_API_KEY` (default model `claude-opus-5-5`, with server-side refusal fallback), `OPENAI_API_KEY` (+ `OPENAI_BASE_URL` for any OpenAI-compatible endpoint), `GEMINI_API_KEY`, per-agent `AGENT_MODEL_*` |
+| AI provider | `ANTHROPIC_API_KEY` (default model `claude-opus-5-5`, with server-side refusal fallback), `OPENAI_API_KEY` (default `gpt-5-mini`, + `OPENAI_BASE_URL` for any OpenAI-compatible endpoint), `GEMINI_API_KEY` (default `gemini-2.5-flash`) |
+| Per-agent AI | Each agent can use a different provider: `AGENT_PROVIDER_RESEARCH=gemini`, `AGENT_PROVIDER_SOCIAL=openai`, and so on, or choose it in Settings. Agents without one use the default provider. `AGENT_MODEL_*` overrides the model. |
 | Storage | `STORAGE=file` (default, `data/office.json`) or `STORAGE=firestore` with `FIREBASE_SERVICE_ACCOUNT` |
 | Auth | Firebase Authentication (`FIREBASE_WEB_CONFIG` + `OWNER_EMAILS`, with ID tokens verified on the server), or a shared `OWNER_ACCESS_KEY`. With neither set, the office is open, which is for local development only. |
 

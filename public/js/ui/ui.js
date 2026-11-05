@@ -31,7 +31,7 @@ const views = {
       list: state.agents.map((a) => {
         const task = state.tasks.find((t) => t.id === a.currentTaskId);
         return `<div class="card clickable" data-action="agent" data-id="${a.id}">
-          <div class="agent-head">${avatar(a.id, 'avatar-badge')}<div style="flex:1;min-width:0"><h3>${esc(a.name)}</h3><div class="meta">${esc(a.title)} · ${esc(a.department)}</div></div>${pill(a.status)}</div>
+          <div class="agent-head">${avatar(a.id, 'avatar-badge')}<div style="flex:1;min-width:0"><h3>${esc(a.name)}</h3><div class="meta">${esc(a.title)} · ${esc(a.department)}</div><div class="meta">AI: ${esc(aiOf(a.id))}</div></div>${pill(a.status)}</div>
           ${task ? `<div class="meta" style="margin-top:8px">Working on: ${esc(task.title)}</div>${progress(task.progress)}` : ''}
           ${a.thought && a.status !== 'idle' ? `<div class="thought">${esc(a.thought)}</div>` : ''}
           <div class="meta" style="margin-top:6px">${a.stats.tasksCompleted} tasks done · ${a.stats.messagesSent} messages · ${a.stats.turns} AI turns</div>
@@ -63,7 +63,7 @@ const views = {
       const task = state.tasks.find((t) => t.id === a.currentTaskId);
       const s = a.stats;
       return {
-        head: `<div class="agent-head">${avatar(id, 'avatar-badge')}<div style="flex:1"><h3 style="margin:0">${esc(a.name)}</h3><div class="meta">${esc(a.title)}</div></div>${pill(a.status)}</div>
+        head: `<div class="agent-head">${avatar(id, 'avatar-badge')}<div style="flex:1"><h3 style="margin:0">${esc(a.name)}</h3><div class="meta">${esc(a.title)}</div><div class="meta">AI: ${esc(aiOf(id))}</div></div>${pill(a.status)}</div>
           ${a.thought && a.status !== 'idle' ? `<div class="thought">${esc(a.thought)}</div>` : ''}
           ${task ? `<div class="card"><div class="meta">Current task</div><h3>${esc(task.title)}</h3>${progress(task.progress)}</div>` : ''}`,
         stats: `<div class="kv">
@@ -191,9 +191,10 @@ const views = {
       const q = (() => { try { return localStorage.getItem('nafi.quality') || 'auto'; } catch { return 'auto'; } })();
       return `
       <div class="section-title">AI provider</div>
-      <div class="card"><div class="meta">Provider</div><h3>${esc(c.provider)}${c.demo ? ' <span class="badge warn">Demo mode</span>' : ' <span class="badge ok">Live inference</span>'}</h3>
-        <div class="meta">Default model: ${esc(state.summary.provider || '—')} · Storage: ${esc(c.storage)} · Auth: ${esc(c.auth)}</div>
-        <p class="muted" style="font-size:12px;margin:8px 0 0">API keys are configured on the server (<code>.env</code>) and never sent to the browser.${c.demo ? ' Set <code>ANTHROPIC_API_KEY</code> to enable real AI agents.' : ''}</p></div>
+      <div class="card"><div class="meta">Default provider</div><h3>${esc(PROVIDER_LABEL[c.provider] || c.provider)}${c.demo ? ' <span class="badge warn">Demo mode</span>' : ' <span class="badge ok">Live inference</span>'}</h3>
+        <div class="meta">Storage: ${esc(c.storage)} · Auth: ${esc(c.auth)} · Keys set: ${esc((c.available || []).map((p) => PROVIDER_LABEL[p]).join(', ') || 'none')}</div>
+        ${state.agents.map((a) => `<div class="meta" style="margin-top:4px"><b style="color:var(--text)">${esc(a.name)}</b> → ${esc(aiOf(a.id))}</div>`).join('')}
+        <p class="muted" style="font-size:12px;margin:8px 0 0">API keys are configured on the server and never sent to the browser. Each agent can use a different AI below; that provider's key must be set on the server.</p></div>
       <div class="section-title">Autonomy</div>
       <div class="card">
         <div class="toggle"><span>Agents running</span><button class="btn sm" data-action="pause">${s.paused ? '▶ Resume' : '⏸ Pause'}</button></div>
@@ -201,7 +202,8 @@ const views = {
       </div>
       <div class="section-title">Agent configuration</div>
       ${state.agents.map((a) => { const o = s.agents?.[a.id] || {}; return `<details class="card"><summary style="cursor:pointer"><b>${esc(a.name)}</b> <span class="muted">· ${esc(a.title)}</span></summary>
-        <div class="form-row"><div><label>Model override</label><input data-agent="${a.id}" data-k="model" value="${esc(o.model || '')}" placeholder="default" style="width:100%"></div>
+        <label>AI provider</label><select data-agent="${a.id}" data-k="provider" style="width:100%">${[['', 'Server default'], ['anthropic', 'Claude (Anthropic)'], ['openai', 'ChatGPT (OpenAI)'], ['gemini', 'Gemini (Google)']].map(([v, l]) => `<option value="${v}" ${(o.provider || '') === v ? 'selected' : ''}>${l}${v && !(c.available || []).includes(v) ? ' — key not set' : ''}</option>`).join('')}</select>
+        <div class="form-row"><div><label>Model override</label><input data-agent="${a.id}" data-k="model" value="${esc(o.model || '')}" placeholder="provider default" style="width:100%"></div>
         <div><label>Effort (Claude)</label><select data-agent="${a.id}" data-k="effort">${['', 'low', 'medium', 'high', 'xhigh', 'max'].map((e) => `<option value="${e}" ${o.effort === e ? 'selected' : ''}>${e || 'default'}</option>`).join('')}</select></div></div>
         <label>Extra instructions</label><textarea data-agent="${a.id}" data-k="extra" rows="3" placeholder="e.g. Always answer in Bahasa Malaysia and English.">${esc(o.extra || '')}</textarea></details>`; }).join('')}
       <button class="btn primary" data-action="save-settings" style="width:100%;margin-top:6px">Save AI settings</button>
@@ -217,6 +219,12 @@ const views = {
     live: () => ({ fps: world?.fps ? `${world.fps} fps` : 'measuring…' }),
   },
 };
+
+const PROVIDER_LABEL = { anthropic: 'Claude', openai: 'ChatGPT', gemini: 'Gemini', demo: 'Demo' };
+function aiOf(id) {
+  const ai = state.summary.ai?.[id];
+  return ai ? `${PROVIDER_LABEL[ai.provider] || ai.provider} · ${ai.model}` : '—';
+}
 
 function fmtNum(n) { return n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(n || 0); }
 
