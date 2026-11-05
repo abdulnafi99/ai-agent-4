@@ -6,13 +6,13 @@ import { Screen, boardTexture, signTexture, cityTexture } from './textures.js';
 
 // ----------------------------------------------------------- layout data
 export const ROOMS = {
-  ceo: { name: 'CEO Office', x: [-22, -8.5], z: [-16, -5], floor: '#5b3a24', accent: '#10b981' },
-  meeting: { name: 'Glass Meeting Room', x: [-8.5, 2.5], z: [-16, -7], floor: '#3a403e', accent: '#34d399' },
-  security: { name: 'Security Ops Centre', x: [2.5, 9], z: [-16, -5], floor: '#2b2622', accent: '#fb923c' },
-  research: { name: 'Research Lab', x: [9, 22], z: [-16, -5], floor: '#2a3a46', accent: '#38bdf8' },
-  development: { name: 'Development Studio', x: [-22, -5], z: [5, 16], floor: '#24222f', accent: '#a78bfa' },
-  social: { name: 'Creative Studio', x: [5, 22], z: [5, 16], floor: '#3b2a31', accent: '#f472b6' },
-  lobby: { name: 'Lobby', x: [-5, 5], z: [5, 16], floor: '#1d2422', accent: '#10b981' },
+  ceo: { name: 'CEO Office', x: [-22, -8.5], z: [-16, -5], floor: '#c49a6c', accent: '#10b981' },
+  meeting: { name: 'Glass Meeting Room', x: [-8.5, 2.5], z: [-16, -7], floor: '#dadde0', accent: '#34d399' },
+  security: { name: 'Security Ops Centre', x: [2.5, 9], z: [-16, -5], floor: '#d3d6d9', accent: '#fb923c' },
+  research: { name: 'Research Lab', x: [9, 22], z: [-16, -5], floor: '#e1e3e5', accent: '#38bdf8' },
+  development: { name: 'Development Studio', x: [-22, -5], z: [5, 16], floor: '#c9a074', accent: '#a78bfa' },
+  social: { name: 'Creative Studio', x: [5, 22], z: [5, 16], floor: '#d8dbde', accent: '#f472b6' },
+  lobby: { name: 'Lobby', x: [-5, 5], z: [5, 16], floor: '#caa27a', accent: '#10b981' },
 };
 
 export const DOORS = {
@@ -46,7 +46,7 @@ export const AMBIENT_SPOTS = [
   { x: 3.3, z: 1.4, heading: Math.PI / 2, label: 'coffee' },
   { x: -20.2, z: -1.2, heading: -Math.PI / 2, label: 'elevator' },
   { x: -3.5, z: 1.8, heading: 0, label: 'cooler' },
-  { x: 0, z: 8.2, heading: Math.PI, label: 'reception' },
+  { x: 0, z: 7.4, heading: 0, label: 'atrium' },
   { x: 18, z: -2.5, heading: 0, label: 'window' },
   { x: -8, z: 2.6, heading: Math.PI / 2, label: 'lounge' },
 ];
@@ -125,10 +125,10 @@ export class Office {
   // ------------------------------------------------------- shell & floors
   buildShell() {
     // ground slab
-    const base = this.box(46, 0.4, 34, '#0e1312', 0, -0.2, 0);
+    const base = this.box(46, 0.4, 34, '#3d4247', 0, -0.2, 0);
     base.castShadow = false;
     // corridor floor (polished)
-    const corridor = this.box(44, 0.02, 32, mat('#202826', { roughness: 0.25, metalness: 0.15 }), 0, 0.01, 0);
+    const corridor = this.box(44, 0.02, 32, mat('#cdd1d5', { roughness: 0.55, metalness: 0.05 }), 0, 0.01, 0);
     corridor.castShadow = false;
     // department floors
     for (const [id, r] of Object.entries(ROOMS)) {
@@ -137,22 +137,13 @@ export class Office {
       f.castShadow = false;
       if (id !== 'lobby') this.clickable(f, { type: id === 'meeting' ? 'meeting' : 'department', id });
       this.roomLabels.push({ text: r.name, pos: new THREE.Vector3((r.x[0] + r.x[1]) / 2, 0.1, id.match(/development|social|lobby/) ? r.z[1] - 1 : r.z[0] + 1.1) });
-      // accent rug
-      if (id !== 'lobby' && id !== 'meeting') {
-        const rug = this.box(Math.min(w - 4, 7), 0.02, Math.min(d - 4, 4.5), mat(r.accent, { roughness: 0.95, transparent: true, opacity: 0.18 }), (r.x[0] + r.x[1]) / 2, 0.06, (r.z[0] + r.z[1]) / 2 + (id.match(/development|social/) ? -0.5 : 0.5));
-        rug.castShadow = false;
-      }
-    }
-    // corridor guide strip lights
-    for (let x = -20; x <= 20; x += 4) {
-      const s = this.box(1.6, 0.02, 0.08, mat('#34d399', { emissive: '#10b981', emissiveIntensity: 0.6 }), x, 0.04, 0);
-      s.castShadow = false; this.lamps.push(s.material);
     }
   }
 
   // ------------------------------------------------------- walls & doors
   buildWalls() {
-    const wallMat = mat('#2a302e', { roughness: 0.85 });
+    const wallMat = mat('#e9ebec', { roughness: 0.9 });
+    const capMat = mat('#3a3f45', { roughness: 0.7 });
     const H = 4.2;
     // north wall with big windows (full height)
     this.box(44.4, H, 0.3, wallMat, 0, H / 2, -16.15);
@@ -161,6 +152,11 @@ export class Office {
     // east and south — low cutaway walls (Sims-style) so the camera sees inside
     this.box(0.3, 1.1, 32.6, wallMat, 22.15, 0.55, 0);
     this.box(44.4, 1.1, 0.3, wallMat, 0, 0.55, 16.15);
+    // dark caps on top of the outer walls, as in an architectural cutaway
+    this.box(44.6, 0.12, 0.34, capMat, 0, H + 0.06, -16.15);
+    this.box(0.34, 0.12, 32.8, capMat, -22.15, H + 0.06, 0);
+    this.box(0.34, 0.12, 32.8, capMat, 22.15, 1.16, 0);
+    this.box(44.6, 0.12, 0.34, capMat, 0, 1.16, 16.15);
 
     // windows on the north wall
     const city = cityTexture();
@@ -170,8 +166,8 @@ export class Office {
       const w = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 2.4), wm);
       w.position.set(x, 2.3, -15.99);
       this.root.add(w);
-      this.box(3.8, 0.12, 0.15, '#4b5552', x, 1.06, -15.95);
-      this.box(3.8, 0.12, 0.15, '#4b5552', x, 3.54, -15.95);
+      this.box(3.8, 0.12, 0.15, '#3a3f45', x, 1.06, -15.95);
+      this.box(3.8, 0.12, 0.15, '#3a3f45', x, 3.54, -15.95);
     }
     // windows on west wall
     for (let z = -12; z <= 12; z += 6) {
@@ -198,23 +194,26 @@ export class Office {
       [5, 5, 22, 5, DOORS.social, 'social'],
       [5, 5, 5, 16, null, 'social'],
     ];
+    // Private offices get solid white walls and wooden doors; open areas get glass.
+    const SOLID = new Set(['ceo', 'security', 'development']);
     for (const [x1, z1, x2, z2, door, room] of segs) {
       const accent = ROOMS[room].accent;
+      const solid = SOLID.has(room);
       if (door) {
         const horizontal = z1 === z2;
         const a = horizontal ? door.x : door.z;
         const lo = horizontal ? Math.min(x1, x2) : Math.min(z1, z2);
         const hi = horizontal ? Math.max(x1, x2) : Math.max(z1, z2);
         if (horizontal) {
-          this.glassWall(lo, z1, a - 1, z1, accent);
-          this.glassWall(a + 1, z1, hi, z1, accent);
+          this.glassWall(lo, z1, a - 1, z1, accent, solid);
+          this.glassWall(a + 1, z1, hi, z1, accent, solid);
         }
-        this.slidingDoor(door.x, door.z, accent, room);
-      } else this.glassWall(x1, z1, x2, z2, accent);
+        this.slidingDoor(door.x, door.z, accent, room, solid);
+      } else this.glassWall(x1, z1, x2, z2, accent, solid);
     }
   }
 
-  glassWall(x1, z1, x2, z2, accent) {
+  glassWall(x1, z1, x2, z2, accent, solid = false) {
     const len = Math.hypot(x2 - x1, z2 - z1);
     if (len < 0.05) return;
     const H = 3;
@@ -222,24 +221,32 @@ export class Office {
     g.position.set((x1 + x2) / 2, 0, (z1 + z2) / 2);
     g.rotation.y = Math.atan2(x2 - x1, z2 - z1) - Math.PI / 2;
     this.root.add(g);
-    const glass = new THREE.Mesh(boxGeo(len, H - 0.15, 0.05), mat('#bfe9e0', { transparent: true, opacity: 0.16, roughness: 0.05, metalness: 0.2, depthWrite: false }));
+    const frame = mat('#2f3439', { metalness: 0.4, roughness: 0.4 });
+    if (solid) {
+      const w = this.box(len, H, 0.14, mat('#f2f3f3', { roughness: 0.9 }), 0, H / 2, 0, g);
+      w.receiveShadow = true;
+      this.box(len, 0.1, 0.16, mat('#b9bec3'), 0, 0.05, 0, g);
+      this.box(len, 0.06, 0.16, frame, 0, H + 0.03, 0, g);
+      return;
+    }
+    const glass = new THREE.Mesh(boxGeo(len, H - 0.15, 0.05), mat('#d6efe9', { transparent: true, opacity: 0.18, roughness: 0.05, metalness: 0.2, depthWrite: false }));
     glass.position.y = H / 2; glass.renderOrder = 2; g.add(glass);
-    this.box(len, 0.08, 0.12, '#59625f', 0, 0.04, 0, g, { metalness: 0.6, roughness: 0.3 });
-    const top = this.box(len, 0.06, 0.12, mat(accent, { emissive: accent, emissiveIntensity: 0.8 }), 0, H, 0, g);
-    this.lamps.push(top.material);
-    for (let p = -len / 2; p <= len / 2 + 0.01; p += Math.max(len / Math.ceil(len / 3), 0.5)) this.box(0.07, H, 0.1, '#59625f', p, H / 2, 0, g, { metalness: 0.6, roughness: 0.3 });
+    this.box(len, 0.08, 0.1, frame, 0, 0.04, 0, g);
+    this.box(len, 0.08, 0.1, frame, 0, H, 0, g);
+    for (let p = -len / 2; p <= len / 2 + 0.01; p += Math.max(len / Math.ceil(len / 2), 0.5)) this.box(0.06, H, 0.08, frame, p, H / 2, 0, g);
   }
 
-  slidingDoor(x, z, accent, room) {
+  slidingDoor(x, z, accent, room, solid = false) {
     const g = new THREE.Group();
     g.position.set(x, 0, z);
     this.root.add(g);
-    const frameMat = mat('#59625f', { metalness: 0.6, roughness: 0.3 });
+    const frameMat = mat('#2f3439', { metalness: 0.4, roughness: 0.4 });
     this.box(0.1, 3, 0.14, frameMat, -1.02, 1.5, 0, g);
     this.box(0.1, 3, 0.14, frameMat, 1.02, 1.5, 0, g);
-    const lintel = this.box(2.14, 0.22, 0.16, mat(accent, { emissive: accent, emissiveIntensity: 0.9 }), 0, 2.95, 0, g);
-    this.lamps.push(lintel.material);
-    const panelMat = mat('#c8f1e6', { transparent: true, opacity: 0.28, roughness: 0.05, metalness: 0.3, depthWrite: false });
+    this.box(2.14, 0.22, 0.16, solid ? mat('#f2f3f3') : frameMat, 0, 2.95, 0, g);
+    const panelMat = solid
+      ? mat('#b47c4c', { roughness: 0.55 })
+      : mat('#d6efe9', { transparent: true, opacity: 0.28, roughness: 0.05, metalness: 0.3, depthWrite: false });
     const left = new THREE.Mesh(boxGeo(1, 2.8, 0.05), panelMat); left.position.set(-0.5, 1.4, 0.03);
     const right = new THREE.Mesh(boxGeo(1, 2.8, 0.05), panelMat); right.position.set(0.5, 1.4, -0.03);
     left.renderOrder = right.renderOrder = 2;
@@ -280,7 +287,27 @@ export class Office {
     return g;
   }
 
-  plant(x, z, scale = 1, potColor = '#d6d3cb') {
+  // Open-plan bench desk: one long wooden table with monitors and chairs on both sides.
+  benchRow(x, z, len, rot, accent) {
+    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; this.root.add(g);
+    this.box(len, 0.06, 1.3, mat('#c49163', { roughness: 0.45 }), 0, 0.78, 0, g);
+    this.box(len - 0.2, 0.3, 0.04, mat('#e9ebec'), 0, 0.96, 0, g); // privacy divider
+    for (const ex of [-len / 2 + 0.1, len / 2 - 0.1]) this.box(0.06, 0.76, 1.2, '#2f3439', ex, 0.38, 0, g);
+    const n = Math.max(2, Math.floor(len / 1.2));
+    for (let i = 0; i < n; i++) {
+      const px = -len / 2 + (i + 0.5) * (len / n);
+      for (const side of [-1, 1]) {
+        const mon = this.box(0.5, 0.32, 0.03, '#15181c', px, 1.04, side * 0.22, g);
+        const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.28), new THREE.MeshBasicMaterial({ color: i % 2 ? '#dbeafe' : '#e2f5ec' }));
+        scr.position.set(px, 1.04, side * 0.24); scr.rotation.y = side > 0 ? 0 : Math.PI; g.add(scr);
+        mon.castShadow = false;
+        this.chair(0, 0, side > 0 ? Math.PI : 0, '#25282d', false, (() => { const c = new THREE.Group(); c.position.set(px, 0, side * 0.95); g.add(c); return c; })());
+      }
+    }
+    return g;
+  }
+
+  plant(x, z, scale = 1, potColor = '#f0f0ee') {
     const g = new THREE.Group(); g.position.set(x, 0, z); g.scale.setScalar(scale); this.root.add(g);
     const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 0.5, 10), mat(potColor, { roughness: 0.8 }));
     pot.position.y = 0.25; pot.castShadow = this.quality !== 'low'; g.add(pot);
@@ -360,15 +387,15 @@ export class Office {
   // ------------------------------------------------------- departments
   buildCEO() {
     const a = ROOMS.ceo.accent;
-    this.workstation('ceo', 'dashboard', a, '#3b2416', '#111111', true);
+    this.workstation('ceo', 'dashboard', a, '#8a5c38', '#1b1d21', true);
     this.wallScreen(-15, 1.05, -15.85, 0, 3.4, 1.6, 'dashboard', a, 'ceo');
     // sofa lounge
-    this.box(2.6, 0.45, 0.9, '#1f2937', -20, 0.32, -9.5).rotation.y = Math.PI / 2;
-    this.box(0.25, 0.8, 2.6, '#1f2937', -20.9, 0.6, -9.5);
+    this.box(2.6, 0.45, 0.9, '#4a4f57', -20, 0.32, -9.5).rotation.y = Math.PI / 2;
+    this.box(0.25, 0.8, 2.6, '#4a4f57', -20.9, 0.6, -9.5);
     this.box(1, 0.35, 1.4, mat('#0f1514', { roughness: 0.3 }), -18.7, 0.25, -9.5);
     // bookshelf
     const shelf = new THREE.Group(); shelf.position.set(-10.3, 0, -15.6); this.root.add(shelf);
-    this.box(2.4, 2.6, 0.4, '#2c1d13', 0, 1.3, 0, shelf);
+    this.box(2.4, 2.6, 0.4, '#a87449', 0, 1.3, 0, shelf);
     const bookColors = ['#10b981', '#e5e7eb', '#1f2937', '#a16207', '#0e7490'];
     for (let r = 0; r < 4; r++) for (let i = 0; i < 9; i++) this.box(0.18, 0.4 + Math.random() * 0.12, 0.28, bookColors[(r + i) % 5], -1 + i * 0.24, 0.3 + r * 0.6, 0.05, shelf);
     // award trophy
@@ -408,7 +435,7 @@ export class Office {
 
   buildResearch() {
     const a = ROOMS.research.accent;
-    this.workstation('research', 'chart', a, '#e5eef3', '#1e3a5f');
+    this.workstation('research', 'chart', a, '#c49163', '#25282d');
     this.wallScreen(11.5, 1.0, -15.85, 0, 2.6, 1.4, 'chart', a, 'research');
     this.wallScreen(16.5, 1.0, -15.85, 0, 2.6, 1.4, 'dashboard', a, 'research');
     this.board(21.85, -10.5, -Math.PI / 2, 'research', a);
@@ -421,7 +448,8 @@ export class Office {
     ring.rotation.x = Math.PI / 2; ring.position.set(10.6, 0.92, -8); this.root.add(ring);
     this.spinners.push({ obj: globe, type: 'spin', speed: 0.35 });
     // document stacks and second desk
-    this.desk(18.5, -8, 2, 0.9, Math.PI / 2, '#e5eef3');
+    this.desk(18.5, -8, 2, 0.9, Math.PI / 2, '#c49163');
+    this.benchRow(19.3, -13.3, 3.6, 0, a);
     for (let i = 0; i < 4; i++) this.box(0.32, 0.04 + i * 0.03, 0.42, '#f8fafc', 18.4, 0.88 + i * 0.02, -8.6 + i * 0.4);
     const scr = new Screen('chart', a); this.screens.push({ screen: scr, agentId: 'research' });
     this.monitor(18.6, 0.86, -7.6, -Math.PI / 2, 0.6, 0.36, scr, this.root, 'research');
@@ -431,7 +459,7 @@ export class Office {
 
   buildSecurity() {
     const a = ROOMS.security.accent;
-    this.workstation('security', 'security', a, '#1c1a19', '#7c2d12');
+    this.workstation('security', 'security', a, '#c49163', '#25282d');
     // threat-map video wall
     this.wallScreen(5.75, 1.0, -15.85, 0, 4.2, 1.7, 'security', a, 'security');
     // firewall / server rack with status LEDs
@@ -457,7 +485,7 @@ export class Office {
 
   buildDevelopment() {
     const a = ROOMS.development.accent;
-    this.workstation('development', 'code', a, '#1f1d2b', '#4c1d95');
+    this.workstation('development', 'code', a, '#c49163', '#25282d');
     this.board(-21.85, 10.5, Math.PI / 2, 'development', a);
     // server racks with blinking LEDs
     for (let i = 0; i < 2; i++) {
@@ -470,8 +498,9 @@ export class Office {
       }
     }
     // pair-programming desk
-    this.desk(-18.5, 13.5, 2.4, 1, 0, '#1f1d2b');
-    this.chair(-18.5, 12.6, 0, '#4c1d95');
+    this.desk(-18.5, 13.5, 2.4, 1, 0, '#c49163');
+    this.chair(-18.5, 12.6, 0, '#25282d');
+    this.benchRow(-8.5, 11.8, 3.6, Math.PI / 2, a);
     const scr = new Screen('code', a); this.screens.push({ screen: scr, agentId: 'development' });
     this.monitor(-18.5, 0.86, 13.75, Math.PI, 0.9, 0.5, scr, this.root, 'development');
     // big wall code display on the corridor-facing side
@@ -487,8 +516,9 @@ export class Office {
 
   buildSocial() {
     const a = ROOMS.social.accent;
-    this.workstation('social', 'social', a, '#f5ede9', '#9d174d');
+    this.workstation('social', 'social', a, '#c49163', '#25282d');
     this.board(21.85, 10.5, -Math.PI / 2, 'social', a);
+    this.benchRow(19.4, 8.4, 3.6, 0, a);
     // camera on tripod
     const cam = new THREE.Group(); cam.position.set(9, 0, 13.5); cam.rotation.y = Math.PI * 0.8; this.root.add(cam);
     for (let i = 0; i < 3; i++) { const leg = this.box(0.03, 1.4, 0.03, '#111', Math.sin(i * 2.1) * 0.25, 0.68, Math.cos(i * 2.1) * 0.25, cam); leg.rotation.z = Math.sin(i * 2.1) * 0.18; leg.rotation.x = -Math.cos(i * 2.1) * 0.18; }
@@ -519,24 +549,31 @@ export class Office {
   }
 
   buildLobby() {
-    // reception desk
-    const rec = new THREE.Group(); rec.position.set(0, 0, 9.4); this.root.add(rec);
-    const curve = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 1.05, 24, 1, true, -Math.PI / 2.6, Math.PI / 1.3), mat('#e8e4dc', { side: THREE.DoubleSide, roughness: 0.4 }));
-    curve.position.y = 0.52; curve.rotation.y = Math.PI; curve.castShadow = true; rec.add(curve);
-    const strip = new THREE.Mesh(new THREE.CylinderGeometry(2.02, 2.02, 0.05, 24, 1, true, -Math.PI / 2.6, Math.PI / 1.3), new THREE.MeshStandardMaterial({ color: '#10b981', emissive: '#10b981', emissiveIntensity: 1, side: THREE.DoubleSide }));
-    strip.position.y = 0.95; strip.rotation.y = Math.PI; rec.add(strip); this.lamps.push(strip.material);
-    // logo wall
-    this.box(7, 3.2, 0.3, '#151b19', 0, 1.6, 15.7);
-    const logo = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 1.4), new THREE.MeshBasicMaterial({ map: signTexture('NAFI AI OFFICE', 'Living Autonomous Workspace'), transparent: true, toneMapped: false }));
-    logo.position.set(0, 2.2, 15.54); logo.rotation.y = Math.PI; this.root.add(logo);
-    // sofas
-    for (const sx of [-3, 3]) {
-      this.box(0.9, 0.45, 2.2, '#134e4a', sx, 0.3, 12.5);
-      this.box(0.25, 0.8, 2.2, '#134e4a', sx + (sx > 0 ? 0.45 : -0.45), 0.6, 12.5);
+    // central atrium: white column ringed by a curved bench, as in the reference layout
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 4.2, 20), mat('#f4f5f5', { roughness: 0.8 }));
+    col.position.set(0, 2.1, 10.8); col.castShadow = col.receiveShadow = this.quality !== 'low'; this.root.add(col);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.2, 0.3, 28), mat('#8c9298'));
+    base.position.set(0, 0.15, 10.8); this.root.add(base);
+    const bench = new THREE.Mesh(new THREE.TorusGeometry(2.1, 0.28, 10, 40, Math.PI * 1.35), mat('#4a5056', { roughness: 0.7 }));
+    bench.rotation.x = -Math.PI / 2; bench.rotation.z = Math.PI * 0.82; bench.position.set(0, 0.3, 10.8); bench.scale.z = 1.6;
+    bench.castShadow = this.quality !== 'low'; this.root.add(bench);
+    this.plant(-0.9, 10.2, 0.7); this.plant(0.9, 11.4, 0.7);
+    // wooden bleacher seating with a bookshelf, against the back wall
+    const stairs = new THREE.Group(); stairs.position.set(2.6, 0, 13.4); this.root.add(stairs);
+    for (let i = 0; i < 4; i++) {
+      this.box(3.4, 0.36 * (i + 1), 0.6, mat('#c49163', { roughness: 0.5 }), 0, 0.18 * (i + 1), -0.9 + i * 0.6, stairs);
+      if (i % 2 === 0) { const cush = this.box(0.5, 0.08, 0.4, mat(['#e2793a', '#3c5f9e'][i / 2], { roughness: 0.9 }), -0.8 + i * 0.5, 0.36 * (i + 1) + 0.04, -0.9 + i * 0.6, stairs); cush.castShadow = false; }
     }
-    this.box(1.2, 0.35, 1.2, mat('#0f1514', { roughness: 0.25 }), 0, 0.22, 12.5);
-    this.plant(-4.4, 15.2, 1.4); this.plant(4.4, 15.2, 1.4);
-    this.pendant(0, 12, '#ecfdf5'); this.roomLight(0, 11, '#e6fff5');
+    const shelf = new THREE.Group(); shelf.position.set(-2.4, 0, 15.5); this.root.add(shelf);
+    this.box(3.2, 2.2, 0.4, '#a87449', 0, 1.1, 0, shelf);
+    const bookColors = ['#3c5f9e', '#e2793a', '#2f5d3c', '#e8a3b8', '#f2f3f3'];
+    for (let r = 0; r < 3; r++) for (let i = 0; i < 10; i++) this.box(0.2, 0.4 + ((i * 7) % 3) * 0.05, 0.28, bookColors[(r + i) % 5], -1.3 + i * 0.28, 0.35 + r * 0.65, -0.06, shelf);
+    // logo wall
+    this.box(7, 3.2, 0.3, '#f2f3f3', 0, 1.6, 15.85);
+    const logo = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 1.1), new THREE.MeshBasicMaterial({ map: signTexture('NAFI AI OFFICE', 'Living Autonomous Workspace', '#10b981'), transparent: true }));
+    logo.position.set(0, 3.0, 15.69); logo.rotation.y = Math.PI; this.root.add(logo);
+    this.plant(-4.4, 14.6, 1.3); this.plant(4.4, 6.2, 1.1);
+    this.pendant(0, 12.5, '#fff7e6'); this.roomLight(0, 11, '#fff4e0');
     // corridor lounge: coffee bar + water cooler + armchairs
     this.box(1.6, 1, 0.7, '#e8e4dc', 4.2, 0.5, 1.4);
     this.box(0.4, 0.5, 0.4, '#1f2937', 4.4, 1.25, 1.4);

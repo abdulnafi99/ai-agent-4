@@ -13,6 +13,7 @@ const files = [
   'build/three.module.js',
   'examples/jsm/controls/OrbitControls.js',
   'examples/jsm/environments/RoomEnvironment.js',
+  'examples/jsm/geometries/RoundedBoxGeometry.js',
 ];
 for (const f of files) {
   fs.mkdirSync(path.dirname(path.join(dest, f)), { recursive: true });

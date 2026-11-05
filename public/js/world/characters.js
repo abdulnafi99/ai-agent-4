@@ -1,19 +1,28 @@
-// Stylised blocky 3D characters with procedural animation states:
-// idle, working (typing), thinking, talking, walking, meeting (seated),
-// completed (celebrating) and error (warning).
+// Stylised blocky 3D characters (rounded, toy-like proportions) with
+// procedural animation states: idle, working (typing), thinking, talking,
+// walking, meeting (seated), completed (celebrating) and error (warning).
+// Each agent's outfit and props follow the owner's character designs.
 import * as THREE from 'three';
-import { faceTextures } from './textures.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { faceTextures, badgeTexture } from './textures.js';
 
+const SKIN = '#f1c9a3';
 const STYLES = {
-  ceo: { skin: '#d9a37a', shirt: '#1f2a44', pants: '#1c1f24', shoes: '#0b0b0b', hair: '#1a1410', face: { beard: true } },
-  research: { skin: '#b97a56', shirt: '#f8fafc', pants: '#334155', shoes: '#1e293b', hair: '#2b1d16', face: { glasses: true, lashes: true } },
-  development: { skin: '#f1c7a0', shirt: '#6d28d9', pants: '#1e3a8a', shoes: '#f5f5f5', hair: '#3b2a1e', face: {} },
-  security: { skin: '#c99068', shirt: '#1c1917', pants: '#292524', shoes: '#0c0a09', hair: '#1a120c', face: { lashes: true } },
-  social: { skin: '#e0ac85', shirt: '#db2777', pants: '#f5f5f4', shoes: '#be185d', hair: '#5a2d1a', face: { lashes: true } },
+  // Navy suit, white shirt, purple tie, slick dark hair, CEO badge, arms crossed.
+  ceo: { skin: SKIN, shirt: '#1f2a44', sleeve: '#1f2a44', pants: '#1f2a44', shoes: '#16181d', hair: '#22252b', badge: 'CEO', face: { smirk: true } },
+  // Glasses, white shirt, green sweater vest, striped tie, brown trousers, book and magnifier.
+  research: { skin: SKIN, shirt: '#2f5d3c', sleeve: '#f5f5f2', pants: '#6b4e37', shoes: '#5a3b26', hair: '#1c1d21', badge: 'RESEARCH', face: { grin: true } },
+  // Blue hoodie, headphones round the neck, dark jeans, laptop.
+  development: { skin: SKIN, shirt: '#3c5f9e', sleeve: '#3c5f9e', pants: '#283246', shoes: '#15171b', hair: '#8a4a26', badge: 'DEVELOPER', face: { smirk: true } },
+  // Orange blazer over white shirt, navy trousers, white trainers, megaphone.
+  social: { skin: SKIN, shirt: '#e2793a', sleeve: '#e2793a', pants: '#25304a', shoes: '#f4f4f2', hair: '#6b3a1e', badge: 'MARKETING', face: { happy: true, grin: true } },
+  // Pink blouse with white collar, dark skirt, hair bun with pink bow, clipboard and bell.
+  security: { skin: SKIN, shirt: '#e8a3b8', sleeve: '#e8a3b8', pants: SKIN, shoes: '#16181d', hair: '#7a4a2a', badge: 'SECURITY', skirt: '#2f3540', socks: '#f4f4f2', face: { lashes: true } },
 };
 
-const m = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.65, ...o });
+const m = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, ...o });
 const damp = (cur, target, k, dt) => cur + (target - cur) * (1 - Math.exp(-k * dt));
+const rbox = (w, h, d, r = 0.06) => new RoundedBoxGeometry(w, h, d, 3, Math.min(r, w / 2, h / 2, d / 2));
 
 export class Avatar {
   constructor(id, quality) {
@@ -24,6 +33,7 @@ export class Avatar {
     this.root.userData.click = { type: 'agent', id };
     this.body = new THREE.Group();
     this.root.add(this.body);
+    this.props = [];
     const shadows = quality !== 'low';
     const part = (geo, mat, parent, x, y, z) => {
       const mesh = new THREE.Mesh(geo, mat);
@@ -33,35 +43,41 @@ export class Avatar {
       parent.add(mesh);
       return mesh;
     };
+    this.part = part;
     const skin = m(s.skin);
 
     // legs (pivot at hip)
     this.legL = new THREE.Group(); this.legL.position.set(-0.15, 0.78, 0);
     this.legR = new THREE.Group(); this.legR.position.set(0.15, 0.78, 0);
     for (const leg of [this.legL, this.legR]) {
-      part(new THREE.BoxGeometry(0.26, 0.66, 0.28), m(s.pants), leg, 0, -0.33, 0);
-      part(new THREE.BoxGeometry(0.28, 0.12, 0.36), m(s.shoes), leg, 0, -0.72, 0.04);
+      part(rbox(0.27, 0.62, 0.29, 0.05), m(s.pants), leg, 0, -0.31, 0);
+      if (s.socks) part(rbox(0.28, 0.1, 0.3, 0.03), m(s.socks), leg, 0, -0.6, 0);
+      part(rbox(0.29, 0.13, 0.38, 0.05), m(s.shoes, { roughness: 0.35 }), leg, 0, -0.71, 0.04);
       this.body.add(leg);
     }
     // torso
     this.torso = new THREE.Group(); this.torso.position.y = 0.78; this.body.add(this.torso);
-    part(new THREE.BoxGeometry(0.64, 0.72, 0.34), m(s.shirt), this.torso, 0, 0.36, 0);
+    part(rbox(0.66, 0.74, 0.36, 0.08), m(s.shirt), this.torso, 0, 0.37, 0);
+    if (s.skirt) part(rbox(0.7, 0.34, 0.4, 0.06), m(s.skirt), this.torso, 0, -0.06, 0);
     // arms (pivot at shoulder)
-    this.armL = new THREE.Group(); this.armL.position.set(-0.43, 0.68, 0);
-    this.armR = new THREE.Group(); this.armR.position.set(0.43, 0.68, 0);
+    this.armL = new THREE.Group(); this.armL.position.set(-0.44, 0.68, 0);
+    this.armR = new THREE.Group(); this.armR.position.set(0.44, 0.68, 0);
     for (const arm of [this.armL, this.armR]) {
-      part(new THREE.BoxGeometry(0.21, 0.5, 0.23), m(id === 'research' ? '#f8fafc' : s.shirt), arm, 0, -0.22, 0);
-      part(new THREE.BoxGeometry(0.19, 0.2, 0.21), skin, arm, 0, -0.56, 0);
+      part(rbox(0.22, 0.52, 0.24, 0.07), m(s.sleeve), arm, 0, -0.22, 0);
+      part(rbox(0.2, 0.2, 0.22, 0.07), skin, arm, 0, -0.57, 0);
       this.torso.add(arm);
     }
-    // head
-    this.head = new THREE.Group(); this.head.position.y = 0.74; this.torso.add(this.head);
+    // head: rounded block with a painted face on the front
+    this.head = new THREE.Group(); this.head.position.y = 0.76; this.torso.add(this.head);
     this.faces = faceTextures(s.skin, s.face);
-    this.faceMat = new THREE.MeshStandardMaterial({ map: this.faces.normal, roughness: 0.7 });
+    this.faceMat = new THREE.MeshStandardMaterial({ map: this.faces.normal, roughness: 0.6 });
     const headMats = [skin, skin, skin, skin, this.faceMat, skin];
-    part(new THREE.BoxGeometry(0.5, 0.5, 0.48), headMats, this.head, 0, 0.27, 0);
-    part(new THREE.BoxGeometry(0.2, 0.1, 0.2), skin, this.torso, 0, 0.76, 0); // neck
-    this.accessorize(part);
+    part(rbox(0.54, 0.54, 0.52, 0.12), headMats, this.head, 0, 0.28, 0);
+    part(rbox(0.22, 0.1, 0.22, 0.03), skin, this.torso, 0, 0.77, 0); // neck
+    // name badge
+    const badge = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.07), new THREE.MeshBasicMaterial({ map: badgeTexture(s.badge), toneMapped: false }));
+    badge.position.set(0.17, 0.6, 0.185); badge.userData.click = { type: 'agent', id }; this.torso.add(badge);
+    this.accessorize(part, skin);
 
     // status indicator ring under the feet
     this.ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.52, 28), new THREE.MeshBasicMaterial({ color: '#10b981', transparent: true, opacity: 0.0, side: THREE.DoubleSide }));
@@ -82,53 +98,97 @@ export class Avatar {
     this.bounce = 0;
   }
 
-  accessorize(part) {
-    const s = this.style; const hair = m(s.hair); const h = this.head;
+  // Hand-held props are shown when standing and hidden at the desk.
+  prop(mesh) { this.props.push(mesh); return mesh; }
+
+  accessorize(part, skin) {
+    const s = this.style; const hair = m(s.hair, { roughness: 0.5 }); const h = this.head;
+    const white = m('#f7f7f5');
     if (this.id === 'ceo') {
-      part(new THREE.BoxGeometry(0.54, 0.14, 0.52), hair, h, 0, 0.57, -0.01);
-      part(new THREE.BoxGeometry(0.54, 0.3, 0.1), hair, h, 0, 0.42, -0.24);
-      part(new THREE.BoxGeometry(0.1, 0.5, 0.02), m('#10b981', { emissive: '#065f46', emissiveIntensity: 0.3 }), this.torso, 0, 0.42, 0.18); // tie
-      part(new THREE.BoxGeometry(0.3, 0.12, 0.02), m('#f8fafc'), this.torso, 0, 0.66, 0.175); // collar
-      part(new THREE.BoxGeometry(0.06, 0.06, 0.02), m('#fbbf24', { metalness: 0.9 }), this.torso, -0.2, 0.55, 0.18); // pin
+      // slick swept-back hair with a little volume on top
+      part(rbox(0.58, 0.16, 0.56, 0.06), hair, h, 0, 0.6, -0.01);
+      part(rbox(0.5, 0.12, 0.3, 0.05), hair, h, 0.02, 0.7, 0.04);
+      part(rbox(0.58, 0.34, 0.1, 0.04), hair, h, 0, 0.42, -0.25);
+      // shirt, lapels, purple tie, pocket line
+      part(rbox(0.22, 0.42, 0.02, 0.01), white, this.torso, 0, 0.53, 0.182);
+      part(rbox(0.08, 0.4, 0.02, 0.01), m('#6c5bc4'), this.torso, 0, 0.5, 0.195);
+      for (const x of [-0.13, 0.13]) { const lap = part(rbox(0.1, 0.36, 0.02, 0.01), m('#18213a'), this.torso, x, 0.55, 0.19); lap.rotation.z = x > 0 ? 0.25 : -0.25; }
+      for (let i = 0; i < 2; i++) part(new THREE.SphereGeometry(0.018, 6, 6), m('#0f1424'), this.torso, -0.05, 0.22 - i * 0.1, 0.19);
     } else if (this.id === 'research') {
-      part(new THREE.BoxGeometry(0.54, 0.16, 0.52), hair, h, 0, 0.57, -0.01);
-      part(new THREE.BoxGeometry(0.54, 0.4, 0.12), hair, h, 0, 0.36, -0.22);
-      part(new THREE.SphereGeometry(0.15, 10, 8), hair, h, 0, 0.62, -0.25); // bun
-      part(new THREE.BoxGeometry(0.66, 0.36, 0.36), m('#f8fafc'), this.torso, 0, 0.0, 0); // coat tails
-      part(new THREE.BoxGeometry(0.12, 0.4, 0.02), m('#38bdf8'), this.torso, 0, 0.42, 0.176); // blouse
-      part(new THREE.BoxGeometry(0.12, 0.03, 0.02), m('#111827'), this.torso, 0.18, 0.56, 0.18); // pen
+      // neat dark hair with a side part
+      part(rbox(0.58, 0.18, 0.56, 0.07), hair, h, 0, 0.6, -0.01);
+      part(rbox(0.36, 0.12, 0.2, 0.05), hair, h, -0.1, 0.62, 0.2);
+      part(rbox(0.58, 0.3, 0.1, 0.04), hair, h, 0, 0.44, -0.25);
+      // 3D glasses frames
+      const frame = m('#141518', { roughness: 0.3 });
+      for (const x of [-0.12, 0.12]) { const g = part(new THREE.TorusGeometry(0.075, 0.014, 6, 16), frame, h, x, 0.3, 0.27); g.scale.y = 0.85; }
+      part(rbox(0.07, 0.015, 0.015, 0.005), frame, h, 0, 0.31, 0.27);
+      // collar and green striped tie
+      part(rbox(0.26, 0.08, 0.02, 0.01), white, this.torso, 0, 0.7, 0.182);
+      part(rbox(0.08, 0.3, 0.02, 0.01), m('#3f7a52'), this.torso, 0, 0.56, 0.19);
+      // V-neck of the vest
+      for (const x of [-0.06, 0.06]) { const v = part(rbox(0.04, 0.2, 0.02, 0.01), m('#24492f'), this.torso, x, 0.62, 0.188); v.rotation.z = x > 0 ? 0.5 : -0.5; }
+      // book (left hand) and magnifying glass (right hand)
+      const book = this.prop(part(rbox(0.3, 0.38, 0.07, 0.02), m('#2f5d3c'), this.armL, 0.05, -0.62, 0.16));
+      part(rbox(0.28, 0.36, 0.02, 0.01), m('#f1ead8'), book, 0, 0, 0.04);
+      const mag = this.prop(new THREE.Group()); mag.position.set(0, -0.66, 0.1); this.armR.add(mag);
+      part(rbox(0.04, 0.2, 0.04, 0.015), m('#3a3a3a'), mag, 0, -0.02, 0);
+      part(new THREE.TorusGeometry(0.1, 0.018, 8, 20), m('#9aa0a6', { metalness: 0.8, roughness: 0.25 }), mag, 0, 0.16, 0);
+      part(new THREE.CircleGeometry(0.09, 20), new THREE.MeshStandardMaterial({ color: '#dff3ff', transparent: true, opacity: 0.45, roughness: 0.05 }), mag, 0, 0.16, 0);
     } else if (this.id === 'development') {
-      for (let i = 0; i < 5; i++) part(new THREE.BoxGeometry(0.16, 0.12, 0.16), hair, h, -0.2 + i * 0.1, 0.56 + (i % 2) * 0.04, -0.05 + (i % 3) * 0.06);
-      part(new THREE.BoxGeometry(0.54, 0.12, 0.5), hair, h, 0, 0.54, -0.02);
-      const band = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.035, 6, 20, Math.PI), m('#111827'));
-      band.position.set(0, 0.3, 0); band.rotation.z = 0; h.add(band);
-      for (const x of [-0.29, 0.29]) {
-        const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.08, 12), m('#a78bfa', { emissive: '#7c3aed', emissiveIntensity: 0.4 }));
-        cup.rotation.z = Math.PI / 2; cup.position.set(x, 0.27, 0); h.add(cup);
-      }
-      part(new THREE.BoxGeometry(0.5, 0.22, 0.12), m('#5b21b6'), this.torso, 0, 0.62, -0.2); // hood
-      part(new THREE.BoxGeometry(0.3, 0.12, 0.02), m('#ede9fe'), this.torso, 0, 0.3, 0.176); // logo
-    } else if (this.id === 'security') {
-      part(new THREE.BoxGeometry(0.56, 0.14, 0.54), hair, h, 0, 0.56, -0.01);
-      part(new THREE.BoxGeometry(0.56, 0.42, 0.12), hair, h, 0, 0.34, -0.23);
-      part(new THREE.BoxGeometry(0.14, 0.42, 0.14), hair, h, 0, 0.12, -0.32); // ponytail
-      // headset with boom mic
-      const band = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.03, 6, 20, Math.PI), m('#0c0a09'));
-      band.position.set(0, 0.3, 0); h.add(band);
-      const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.07, 12), m('#fb923c', { emissive: '#c2410c', emissiveIntensity: 0.4 }));
-      cup.rotation.z = Math.PI / 2; cup.position.set(0.29, 0.27, 0); h.add(cup);
-      part(new THREE.BoxGeometry(0.03, 0.03, 0.22), m('#0c0a09'), h, 0.27, 0.15, 0.12);
-      // jacket trim and badge
-      part(new THREE.BoxGeometry(0.06, 0.66, 0.02), m('#fb923c'), this.torso, -0.13, 0.36, 0.176);
-      part(new THREE.BoxGeometry(0.06, 0.66, 0.02), m('#fb923c'), this.torso, 0.13, 0.36, 0.176);
-      part(new THREE.BoxGeometry(0.12, 0.08, 0.02), m('#fde68a', { metalness: 0.6 }), this.torso, -0.22, 0.56, 0.18);
+      // spiky brown hair
+      part(rbox(0.58, 0.14, 0.56, 0.06), hair, h, 0, 0.58, -0.01);
+      for (let i = 0; i < 6; i++) { const sp = part(rbox(0.15, 0.2, 0.15, 0.04), hair, h, -0.2 + i * 0.08, 0.68 + (i % 2) * 0.05, -0.04 + (i % 3) * 0.08); sp.rotation.z = (i - 2.5) * 0.18; sp.rotation.x = -0.2; }
+      part(rbox(0.58, 0.28, 0.1, 0.04), hair, h, 0, 0.44, -0.25);
+      // hood, drawstrings, pocket
+      part(rbox(0.56, 0.2, 0.14, 0.05), m('#33528a'), this.torso, 0, 0.68, -0.18);
+      for (const x of [-0.08, 0.08]) part(rbox(0.02, 0.22, 0.02, 0.005), white, this.torso, x, 0.56, 0.19);
+      part(rbox(0.4, 0.14, 0.02, 0.02), m('#33528a'), this.torso, 0, 0.14, 0.185);
+      // headphones resting round the neck
+      const band = part(new THREE.TorusGeometry(0.24, 0.03, 6, 20, Math.PI), m('#2a2d33'), this.torso, 0, 0.76, 0.02);
+      band.rotation.x = Math.PI / 2; band.rotation.z = Math.PI;
+      for (const x of [-0.24, 0.24]) { const cup = part(new THREE.CylinderGeometry(0.09, 0.09, 0.07, 14), m('#3a3e46'), this.torso, x, 0.76, 0.06); cup.rotation.z = Math.PI / 2; }
+      // laptop held in front (base in hands, screen tilted up)
+      const lap = this.prop(new THREE.Group()); lap.position.set(0.44, -0.62, 0.06); lap.rotation.x = 1.1; this.armL.add(lap);
+      part(rbox(0.48, 0.03, 0.32, 0.01), m('#c7ccd3', { metalness: 0.6, roughness: 0.3 }), lap, 0, 0, 0);
+      const scr = part(rbox(0.48, 0.3, 0.02, 0.01), m('#c7ccd3', { metalness: 0.6, roughness: 0.3 }), lap, 0, 0.15, -0.16); scr.rotation.x = -0.35;
+      part(new THREE.PlaneGeometry(0.42, 0.25), new THREE.MeshBasicMaterial({ color: '#1e293b' }), scr, 0, 0, 0.012);
     } else if (this.id === 'social') {
-      part(new THREE.BoxGeometry(0.56, 0.14, 0.54), hair, h, 0, 0.56, -0.01);
-      part(new THREE.BoxGeometry(0.58, 0.62, 0.14), hair, h, 0, 0.22, -0.23);
-      const beret = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.08, 16), m('#111827'));
-      beret.position.set(0.04, 0.66, 0); beret.rotation.z = -0.18; h.add(beret);
-      this.phone = part(new THREE.BoxGeometry(0.1, 0.18, 0.02), m('#0f172a', { emissive: '#f472b6', emissiveIntensity: 0.3 }), this.armR, 0, -0.66, 0.12);
-      part(new THREE.BoxGeometry(0.66, 0.06, 0.36), m('#fbcfe8'), this.torso, 0, 0.1, 0);
+      // tousled brown hair falling to the jaw
+      part(rbox(0.6, 0.16, 0.58, 0.06), hair, h, 0, 0.6, -0.01);
+      for (let i = 0; i < 5; i++) { const sp = part(rbox(0.14, 0.18, 0.14, 0.04), hair, h, -0.2 + i * 0.1, 0.7, 0.02 + (i % 2) * 0.06); sp.rotation.z = (i - 2) * 0.25; }
+      for (const x of [-0.3, 0.3]) part(rbox(0.08, 0.42, 0.42, 0.04), hair, h, x, 0.36, -0.02);
+      part(rbox(0.6, 0.44, 0.1, 0.04), hair, h, 0, 0.36, -0.26);
+      // white shirt opening, lapels, belt
+      part(rbox(0.2, 0.5, 0.02, 0.01), white, this.torso, 0, 0.48, 0.182);
+      for (const x of [-0.12, 0.12]) { const lap = part(rbox(0.09, 0.36, 0.02, 0.01), m('#c9652b'), this.torso, x, 0.55, 0.19); lap.rotation.z = x > 0 ? 0.3 : -0.3; }
+      part(rbox(0.66, 0.06, 0.37, 0.02), m('#1a1a1a'), this.torso, 0, 0.03, 0);
+      part(rbox(0.08, 0.06, 0.02, 0.01), m('#d4a52c', { metalness: 0.8 }), this.torso, 0, 0.03, 0.19);
+      // megaphone in the right hand
+      const mega = this.prop(new THREE.Group()); mega.position.set(0, -0.68, 0.12); this.armR.add(mega);
+      const cone = part(new THREE.CylinderGeometry(0.16, 0.06, 0.32, 16, 1, true), m('#f2f2f0', { side: THREE.DoubleSide }), mega, 0, 0.06, 0.16);
+      cone.rotation.x = Math.PI / 2;
+      part(new THREE.TorusGeometry(0.16, 0.025, 6, 20), m('#e2793a'), mega, 0, 0.06, 0.32);
+      part(rbox(0.07, 0.16, 0.07, 0.02), m('#e2793a'), mega, 0, -0.06, 0);
+    } else if (this.id === 'security') {
+      // brown hair pulled into a high bun with a pink bow
+      part(rbox(0.6, 0.18, 0.58, 0.07), hair, h, 0, 0.6, -0.01);
+      for (const x of [-0.29, 0.29]) part(rbox(0.06, 0.3, 0.44, 0.03), hair, h, x, 0.44, -0.03);
+      part(rbox(0.58, 0.32, 0.1, 0.04), hair, h, 0, 0.44, -0.26);
+      part(new THREE.SphereGeometry(0.17, 12, 10), hair, h, 0, 0.78, -0.08);
+      const bow = m('#f08cb0');
+      for (const x of [-0.1, 0.1]) { const b = part(rbox(0.13, 0.1, 0.05, 0.02), bow, h, x, 0.76, 0.08); b.rotation.z = x > 0 ? -0.3 : 0.3; }
+      part(new THREE.SphereGeometry(0.035, 8, 8), bow, h, 0, 0.76, 0.1);
+      // white collar and blouse buttons
+      for (const x of [-0.08, 0.08]) { const c = part(rbox(0.14, 0.08, 0.02, 0.01), white, this.torso, x, 0.71, 0.185); c.rotation.z = x > 0 ? -0.35 : 0.35; }
+      for (let i = 0; i < 3; i++) part(new THREE.SphereGeometry(0.015, 6, 6), white, this.torso, 0, 0.58 - i * 0.12, 0.185);
+      // clipboard (left hand) and service bell (right hand)
+      const clip = this.prop(part(rbox(0.28, 0.38, 0.03, 0.02), m('#b98c5a'), this.armL, 0.05, -0.64, 0.16));
+      part(rbox(0.24, 0.3, 0.01, 0.005), white, clip, 0, -0.02, 0.02);
+      part(rbox(0.1, 0.04, 0.03, 0.01), m('#9aa0a6', { metalness: 0.8 }), clip, 0, 0.18, 0.02);
+      const bell = this.prop(new THREE.Group()); bell.position.set(0, -0.7, 0.1); this.armR.add(bell);
+      part(new THREE.CylinderGeometry(0.11, 0.11, 0.03, 16), m('#1f1f22'), bell, 0, 0, 0);
+      part(new THREE.SphereGeometry(0.09, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), m('#d9dde1', { metalness: 0.9, roughness: 0.2 }), bell, 0, 0.015, 0);
     }
   }
 
@@ -202,7 +262,14 @@ export class Avatar {
       // standing idle
       T.headY = Math.sin(t * 0.45 + this.id.length) * 0.4;
       T.armLx = Math.sin(t * 1.1) * 0.05; T.armRx = -Math.sin(t * 1.1) * 0.05;
-      if (this.id === 'social') { T.armRx = -1.25; T.armRz = 0.25; T.headX = 0.2; } // checking phone
+      const pose = {
+        ceo: () => { T.armLx = -1.35; T.armRx = -1.2; T.armLz = 0.85; T.armRz = -0.85; }, // arms crossed
+        research: () => { T.armLx = -1.0; T.armLz = 0.15; T.armRx = -0.9; T.armRz = -0.1; T.headX = 0.12; },
+        development: () => { T.armLx = -1.1; T.armRx = -1.1; T.armLz = 0.05; T.armRz = -0.05; T.headX = 0.25; },
+        social: () => { T.armRx = -2.2 + Math.sin(t * 2) * 0.1; T.armRz = -0.2; T.armLx = -0.2; },
+        security: () => { T.armLx = -0.9; T.armLz = 0.15; T.armRx = -0.7; T.armRz = -0.1; },
+      }[this.id];
+      pose?.();
       if (status === 'thinking') { T.armRx = -2.3; T.armRz = 0.55; T.headZ = 0.14; }
       if (status === 'error') { T.headY = Math.sin(t * 9) * 0.3; T.armLx = T.armRx = -0.3; }
     }
@@ -216,6 +283,10 @@ export class Avatar {
       T.bodyY += Math.abs(Math.sin(t * 7)) * (this.seated ? 0.06 : 0.35);
     }
     if (this.bounce > 0) { this.bounce = Math.max(0, this.bounce - dt * 1.6); T.bodyY += Math.sin(this.bounce * Math.PI * 3) * 0.12 * this.bounce; }
+
+    // props in hand only while standing (not typing at the desk or walking fast)
+    const showProps = !this.seated;
+    for (const p of this.props) p.visible = showProps;
 
     const k = 12;
     this.legL.rotation.x = damp(this.legL.rotation.x, T.legL, k, dt);

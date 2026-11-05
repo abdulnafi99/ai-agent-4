@@ -162,30 +162,54 @@ export function cityTexture() {
 }
 
 // ---------------------------------------------------------------- faces
-export function faceTextures(skin, { glasses = false, lashes = false, beard = false } = {}) {
+// Toy-style faces: dark oval eyes with a highlight, simple brows and mouth.
+export function faceTextures(skin, { glasses = false, lashes = false, beard = false, smirk = false, grin = false, happy = false } = {}) {
   const make = (mode) => {
     const c = canvas(128, 128); const ctx = c.getContext('2d');
     ctx.fillStyle = skin; ctx.fillRect(0, 0, 128, 128);
+    const ink = '#2a1c16';
     // eyes
-    ctx.fillStyle = '#1b1b1f';
-    if (mode === 'blink') { ctx.fillRect(34, 58, 18, 4); ctx.fillRect(76, 58, 18, 4); }
-    else {
-      ctx.beginPath(); ctx.ellipse(43, 58, 7, 9, 0, 0, Math.PI * 2); ctx.ellipse(85, 58, 7, 9, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(45, 55, 2.5, 0, 7); ctx.arc(87, 55, 2.5, 0, 7); ctx.fill();
+    ctx.fillStyle = ink; ctx.strokeStyle = ink; ctx.lineCap = 'round';
+    if (mode === 'blink' || (happy && mode !== 'talk')) {
+      ctx.lineWidth = 4.5;
+      ctx.beginPath(); ctx.arc(43, 62, 9, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+      ctx.beginPath(); ctx.arc(85, 62, 9, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.ellipse(43, 58, 7.5, 10, 0, 0, Math.PI * 2); ctx.ellipse(85, 58, 7.5, 10, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(45.5, 54, 2.8, 0, 7); ctx.arc(87.5, 54, 2.8, 0, 7); ctx.fill();
     }
-    if (lashes && mode !== 'blink') { ctx.strokeStyle = '#1b1b1f'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(34, 49); ctx.lineTo(30, 45); ctx.moveTo(94, 49); ctx.lineTo(98, 45); ctx.stroke(); }
+    if (lashes && mode !== 'blink') {
+      ctx.lineWidth = 2.5;
+      for (const [x, d] of [[35, -1], [93, 1]]) { ctx.beginPath(); ctx.moveTo(x, 50); ctx.lineTo(x + d * 5, 45); ctx.moveTo(x + d * 2, 54); ctx.lineTo(x + d * 8, 51); ctx.stroke(); }
+    }
     // brows
-    ctx.strokeStyle = 'rgba(30,20,15,.75)'; ctx.lineWidth = 4; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(34, 42); ctx.lineTo(52, 40); ctx.moveTo(76, 40); ctx.lineTo(94, 42); ctx.stroke();
+    ctx.strokeStyle = '#3a2418'; ctx.lineWidth = 4.5;
+    ctx.beginPath(); ctx.moveTo(33, 40); ctx.quadraticCurveTo(43, 35, 53, 40); ctx.moveTo(75, 40); ctx.quadraticCurveTo(85, 35, 95, 40); ctx.stroke();
     // blush
-    ctx.fillStyle = 'rgba(244,114,182,.28)'; ctx.beginPath(); ctx.arc(30, 76, 8, 0, 7); ctx.arc(98, 76, 8, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(240,120,130,.22)'; ctx.beginPath(); ctx.arc(29, 78, 8, 0, 7); ctx.arc(99, 78, 8, 0, 7); ctx.fill();
     // mouth
     ctx.strokeStyle = '#5b2b22'; ctx.fillStyle = '#5b2b22'; ctx.lineWidth = 4;
-    if (mode === 'talk') { ctx.beginPath(); ctx.ellipse(64, 88, 10, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#e88a8a'; ctx.beginPath(); ctx.ellipse(64, 92, 6, 3, 0, 0, Math.PI * 2); ctx.fill(); }
-    else { ctx.beginPath(); ctx.arc(64, 78, 14, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke(); }
-    if (beard) { ctx.fillStyle = 'rgba(40,28,22,.35)'; ctx.beginPath(); ctx.ellipse(64, 104, 30, 16, 0, 0, Math.PI); ctx.fill(); }
-    if (glasses) { ctx.strokeStyle = '#111827'; ctx.lineWidth = 3.5; ctx.strokeRect(29, 47, 28, 22); ctx.strokeRect(71, 47, 28, 22); ctx.beginPath(); ctx.moveTo(57, 56); ctx.lineTo(71, 56); ctx.stroke(); }
+    if (mode === 'talk' || grin) {
+      ctx.beginPath(); ctx.moveTo(48, 80); ctx.quadraticCurveTo(64, 82, 80, 80); ctx.quadraticCurveTo(64, mode === 'talk' ? 104 : 98, 48, 80); ctx.fill();
+      ctx.fillStyle = '#e98a8a'; ctx.beginPath(); ctx.ellipse(64, 91, 8, 4, 0, 0, Math.PI * 2); ctx.fill();
+    } else if (smirk) {
+      ctx.beginPath(); ctx.moveTo(48, 82); ctx.quadraticCurveTo(66, 94, 82, 78); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(64, 76, 15, 0.22 * Math.PI, 0.78 * Math.PI); ctx.stroke();
+    }
+    if (beard) { ctx.fillStyle = 'rgba(40,28,22,.3)'; ctx.beginPath(); ctx.ellipse(64, 104, 30, 16, 0, 0, Math.PI); ctx.fill(); }
+    if (glasses) { ctx.strokeStyle = '#141518'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(43, 58, 15, 0, 7); ctx.moveTo(100, 58); ctx.arc(85, 58, 15, 0, 7); ctx.moveTo(58, 56); ctx.lineTo(70, 56); ctx.stroke(); }
     return makeTex(c);
   };
   return { normal: make('normal'), talk: make('talk'), blink: make('blink') };
+}
+
+// Small name badge, e.g. "CEO", "RESEARCH".
+export function badgeTexture(text) {
+  const c = canvas(192, 64); const ctx = c.getContext('2d');
+  ctx.fillStyle = '#f7f7f5'; ctx.fillRect(0, 0, 192, 64);
+  ctx.fillStyle = '#2f6fd1'; ctx.fillRect(0, 0, 192, 12);
+  ctx.fillStyle = '#16181d'; ctx.font = `bold ${text.length > 8 ? 26 : 32}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, 96, 40);
+  return makeTex(c);
 }

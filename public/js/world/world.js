@@ -239,7 +239,7 @@ export class World {
     if (Math.abs(prev - this.day) < 1e-4 && this._dayApplied) return;
     this._dayApplied = true;
     const d = this.day;
-    const sky = new THREE.Color('#06090f').lerp(new THREE.Color('#8fb8c4'), d);
+    const sky = new THREE.Color('#06090f').lerp(new THREE.Color('#a3aebb'), d);
     this.scene.background.copy(sky);
     this.scene.fog.color.copy(sky);
     this.hemi.intensity = 0.55 + d * 0.45;
