@@ -1,8 +1,8 @@
 # NAFI AI OFFICE
 
-**A living 3D office where four AI agents work as a company.**
+**A living 3D office where five AI agents work as a company.**
 
-NAFI AI OFFICE is an interactive 3D workspace built with Three.js. Four AI employees (a CEO, a Research specialist, a Lead Developer and a Social Media specialist) each run on their own system prompt. They talk to each other through a shared message bus, hand each other tasks through a central task queue, meet in a glass meeting room and report back to you. Their 3D avatars show what they are actually doing: typing while they work, thinking, walking between departments, sitting in meetings, celebrating when they finish and showing a warning when something fails.
+NAFI AI OFFICE is an interactive 3D workspace built with Three.js. Five AI employees (a CEO, a Research specialist, a Lead Developer, a Social Media specialist and a Cyber Security specialist) each run on their own system prompt. They talk to each other through a shared message bus, hand each other tasks through a central task queue, meet in a glass meeting room and report back to you. Their 3D avatars show what they are actually doing: typing while they work, thinking, walking between departments, sitting in meetings, celebrating when they finish and showing a warning when something fails.
 
 ## Live deployment
 
@@ -53,7 +53,7 @@ Owner ──instruction──▶ CEO inbox
 
 ## The 3D office
 
-- Five spaces: the CEO executive office, a glass meeting room, the Research lab, the Development studio and the Creative (social media) studio, plus a lobby, a lounge corridor and an animated elevator.
+- Six spaces: the CEO executive office, a glass meeting room, the Security Operations Centre, the Research lab, the Development studio and the Creative (social media) studio, plus a lobby, a lounge corridor and an animated elevator.
 - Glass sliding doors open when someone walks up to them. The low south and east walls are cut away so you can see inside, as in The Sims.
 - Computer screens are drawn live: code for Development, charts for Research, a social feed for Social Media, a dashboard for the CEO. When an agent is idle, its screen shows a screensaver.
 - Day and night lighting can follow your local time or be set to day, night or a continuous cycle.
@@ -77,7 +77,7 @@ See `.env.example` for every option.
 | Area | Options |
 |---|---|
 | AI provider | `ANTHROPIC_API_KEY` (default model `claude-opus-5-5`, with server-side refusal fallback), `OPENAI_API_KEY` (default `gpt-5-mini`, + `OPENAI_BASE_URL` for any OpenAI-compatible endpoint), `GEMINI_API_KEY` (default `gemini-2.5-flash`) |
-| Per-agent AI | Each agent can use a different provider: `AGENT_PROVIDER_RESEARCH=gemini`, `AGENT_PROVIDER_SOCIAL=openai`, and so on, or choose it in Settings. Agents without one use the default provider. `AGENT_MODEL_*` overrides the model. |
+| Per-agent AI | Each agent can use a different provider: `AGENT_PROVIDER_RESEARCH=gemini`, `AGENT_PROVIDER_SOCIAL=openai`, `AGENT_PROVIDER_SECURITY=…`, and so on, or choose it in Settings. Agents without one use the default provider. `AGENT_MODEL_*` overrides the model. |
 | Storage | `STORAGE=file` (default, `data/office.json`) or `STORAGE=firestore` with `FIREBASE_SERVICE_ACCOUNT` |
 | Auth | Firebase Authentication (`FIREBASE_WEB_CONFIG` + `OWNER_EMAILS`, with ID tokens verified on the server), or a shared `OWNER_ACCESS_KEY`. With neither set, the office is open, which is for local development only. |
 
@@ -97,7 +97,7 @@ server/
   config.js             environment configuration
   auth.js               Firebase ID-token / owner-key authentication
   store.js              persistent store (JSON file or Firestore)
-  agents/definitions.js the four agents, shared protocol, JSON schema
+  agents/definitions.js the five agents, shared protocol, JSON schema
   agents/engine.js      inboxes, task manager, delegation, meetings, approvals
   ai/providers.js       Anthropic (Claude), OpenAI, Gemini adapters
   ai/demo.js            offline demo responder (no key configured)

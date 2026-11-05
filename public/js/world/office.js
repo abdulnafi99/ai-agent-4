@@ -8,7 +8,8 @@ import { Screen, boardTexture, signTexture, cityTexture } from './textures.js';
 export const ROOMS = {
   ceo: { name: 'CEO Office', x: [-22, -8.5], z: [-16, -5], floor: '#5b3a24', accent: '#10b981' },
   meeting: { name: 'Glass Meeting Room', x: [-8.5, 2.5], z: [-16, -7], floor: '#3a403e', accent: '#34d399' },
-  research: { name: 'Research Lab', x: [5, 22], z: [-16, -5], floor: '#2a3a46', accent: '#38bdf8' },
+  security: { name: 'Security Ops Centre', x: [2.5, 9], z: [-16, -5], floor: '#2b2622', accent: '#fb923c' },
+  research: { name: 'Research Lab', x: [9, 22], z: [-16, -5], floor: '#2a3a46', accent: '#38bdf8' },
   development: { name: 'Development Studio', x: [-22, -5], z: [5, 16], floor: '#24222f', accent: '#a78bfa' },
   social: { name: 'Creative Studio', x: [5, 22], z: [5, 16], floor: '#3b2a31', accent: '#f472b6' },
   lobby: { name: 'Lobby', x: [-5, 5], z: [5, 16], floor: '#1d2422', accent: '#10b981' },
@@ -17,7 +18,8 @@ export const ROOMS = {
 export const DOORS = {
   ceo: { x: -15, z: -5 },
   meeting: { x: -3, z: -7 },
-  research: { x: 13, z: -5 },
+  security: { x: 5.75, z: -5 },
+  research: { x: 14, z: -5 },
   development: { x: -13, z: 5 },
   social: { x: 13, z: 5 },
 };
@@ -25,7 +27,8 @@ export const DOORS = {
 // Where each agent sits (heading: rotation.y, 0 faces +z).
 export const DESKS = {
   ceo: { x: -15, z: -12.6, heading: 0, room: 'ceo' },
-  research: { x: 13, z: -11.6, heading: 0, room: 'research' },
+  research: { x: 14, z: -11.6, heading: 0, room: 'research' },
+  security: { x: 5.75, z: -12.2, heading: 0, room: 'security' },
   development: { x: -13, z: 10.6, heading: Math.PI, room: 'development' },
   social: { x: 13, z: 10.6, heading: Math.PI, room: 'social' },
 };
@@ -44,7 +47,7 @@ export const AMBIENT_SPOTS = [
   { x: -20.2, z: -1.2, heading: -Math.PI / 2, label: 'elevator' },
   { x: -3.5, z: 1.8, heading: 0, label: 'cooler' },
   { x: 0, z: 8.2, heading: Math.PI, label: 'reception' },
-  { x: 17, z: -2.5, heading: 0, label: 'window' },
+  { x: 18, z: -2.5, heading: 0, label: 'window' },
   { x: -8, z: 2.6, heading: Math.PI / 2, label: 'lounge' },
 ];
 
@@ -52,7 +55,8 @@ export const FOCUS = {
   overview: { pos: [20, 30, 36], target: [0, 0, 0] },
   ceo: { pos: [-8, 13, 3], target: [-15, 0, -11] },
   meeting: { pos: [5, 15, 4], target: [-3, 0, -11.5] },
-  research: { pos: [20, 13, 3], target: [13, 0, -11] },
+  research: { pos: [21, 13, 3], target: [14, 0, -11] },
+  security: { pos: [10, 13, 2], target: [5.75, 0, -11] },
   development: { pos: [-7, 13, 23], target: [-13, 0, 10] },
   social: { pos: [19, 13, 23], target: [13, 0, 10] },
 };
@@ -110,6 +114,7 @@ export class Office {
     this.buildCEO();
     this.buildMeeting();
     this.buildResearch();
+    this.buildSecurity();
     this.buildDevelopment();
     this.buildSocial();
     this.buildLobby();
@@ -184,8 +189,10 @@ export class Office {
       [-8.5, -16, -8.5, -5, null, 'ceo'],
       [-8.5, -7, 2.5, -7, DOORS.meeting, 'meeting'],
       [2.5, -16, 2.5, -7, null, 'meeting'],
-      [5, -16, 5, -5, null, 'research'],
-      [5, -5, 22, -5, DOORS.research, 'research'],
+      [2.5, -7, 2.5, -5, null, 'security'],
+      [2.5, -5, 9, -5, DOORS.security, 'security'],
+      [9, -16, 9, -5, null, 'research'],
+      [9, -5, 22, -5, DOORS.research, 'research'],
       [-22, 5, -5, 5, DOORS.development, 'development'],
       [-5, 5, -5, 16, null, 'development'],
       [5, 5, 22, 5, DOORS.social, 'social'],
@@ -402,24 +409,50 @@ export class Office {
   buildResearch() {
     const a = ROOMS.research.accent;
     this.workstation('research', 'chart', a, '#e5eef3', '#1e3a5f');
-    this.wallScreen(10.5, 1.0, -15.85, 0, 2.6, 1.4, 'chart', a, 'research');
-    this.wallScreen(15.5, 1.0, -15.85, 0, 2.6, 1.4, 'dashboard', a, 'research');
+    this.wallScreen(11.5, 1.0, -15.85, 0, 2.6, 1.4, 'chart', a, 'research');
+    this.wallScreen(16.5, 1.0, -15.85, 0, 2.6, 1.4, 'dashboard', a, 'research');
     this.board(21.85, -10.5, -Math.PI / 2, 'research', a);
     // holographic globe
     const globe = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 12), new THREE.MeshBasicMaterial({ color: '#38bdf8', wireframe: true, transparent: true, opacity: 0.55 }));
-    globe.position.set(7.5, 1.6, -8); this.root.add(globe);
+    globe.position.set(10.6, 1.6, -8); this.root.add(globe);
     const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.9, 16), mat('#1e293b', { metalness: 0.5 }));
-    ped.position.set(7.5, 0.45, -8); ped.castShadow = true; this.root.add(ped);
+    ped.position.set(10.6, 0.45, -8); ped.castShadow = true; this.root.add(ped);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.02, 6, 32), new THREE.MeshBasicMaterial({ color: '#7dd3fc' }));
-    ring.rotation.x = Math.PI / 2; ring.position.set(7.5, 0.92, -8); this.root.add(ring);
+    ring.rotation.x = Math.PI / 2; ring.position.set(10.6, 0.92, -8); this.root.add(ring);
     this.spinners.push({ obj: globe, type: 'spin', speed: 0.35 });
     // document stacks and second desk
     this.desk(18.5, -8, 2, 0.9, Math.PI / 2, '#e5eef3');
     for (let i = 0; i < 4; i++) this.box(0.32, 0.04 + i * 0.03, 0.42, '#f8fafc', 18.4, 0.88 + i * 0.02, -8.6 + i * 0.4);
     const scr = new Screen('chart', a); this.screens.push({ screen: scr, agentId: 'research' });
     this.monitor(18.6, 0.86, -7.6, -Math.PI / 2, 0.6, 0.36, scr, this.root, 'research');
-    this.plant(6, -15.2, 1.2); this.plant(21, -6, 1);
-    this.pendant(13, -10.8, '#e0f2fe'); this.roomLight(13, -10, '#dbeafe');
+    this.plant(9.8, -15.2, 1.2); this.plant(21, -6, 1);
+    this.pendant(14, -10.8, '#e0f2fe'); this.roomLight(14, -10, '#dbeafe');
+  }
+
+  buildSecurity() {
+    const a = ROOMS.security.accent;
+    this.workstation('security', 'security', a, '#1c1a19', '#7c2d12');
+    // threat-map video wall
+    this.wallScreen(5.75, 1.0, -15.85, 0, 4.2, 1.7, 'security', a, 'security');
+    // firewall / server rack with status LEDs
+    const rack = new THREE.Group(); rack.position.set(3.2, 0, -14.8); this.root.add(rack);
+    this.box(0.8, 2.2, 0.7, '#0f0d0c', 0, 1.1, 0, rack, { metalness: 0.5 });
+    for (let k = 0; k < 8; k++) {
+      const led = new THREE.Mesh(boxGeo(0.05, 0.04, 0.02), new THREE.MeshBasicMaterial({ color: k % 4 === 0 ? '#ef4444' : '#22c55e' }));
+      led.position.set(-0.25 + (k % 2) * 0.1, 0.4 + k * 0.22, 0.36); rack.add(led);
+      this.leds.push({ m: led, phase: Math.random() * 10 });
+    }
+    // holographic shield
+    const shield = new THREE.Mesh(new THREE.OctahedronGeometry(0.45, 0), new THREE.MeshBasicMaterial({ color: a, wireframe: true, transparent: true, opacity: 0.75 }));
+    shield.position.set(8, 1.6, -7.6); this.root.add(shield);
+    const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.9, 12), mat('#1c1917', { metalness: 0.5 }));
+    ped.position.set(8, 0.45, -7.6); ped.castShadow = this.quality !== 'low'; this.root.add(ped);
+    this.spinners.push({ obj: shield, type: 'spin', speed: 0.6 });
+    // warning-stripe floor marking at the door
+    const stripe = this.box(1.8, 0.02, 0.25, mat('#f59e0b', { emissive: '#b45309', emissiveIntensity: 0.4 }), 5.75, 0.06, -5.6);
+    stripe.castShadow = false;
+    this.plant(8.4, -15.2, 1);
+    this.pendant(5.75, -11.4, '#ffedd5'); this.roomLight(5.75, -10.5, '#ffe4cc');
   }
 
   buildDevelopment() {
@@ -532,7 +565,7 @@ export class Office {
 
   buildDecor() {
     // floating department holo-signs
-    const signs = [['CEO', '#10b981', -15, -5.2], ['RESEARCH', '#38bdf8', 13, -5.2], ['DEVELOPMENT', '#a78bfa', -13, 5.2], ['CREATIVE', '#f472b6', 13, 5.2]];
+    const signs = [['CEO', '#10b981', -15, -5.2], ['RESEARCH', '#38bdf8', 14, -5.2], ['SECURITY', '#fb923c', 5.75, -5.2], ['DEVELOPMENT', '#a78bfa', -13, 5.2], ['CREATIVE', '#f472b6', 13, 5.2]];
     for (const [t, c, x, z] of signs) {
       const s = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.65), new THREE.MeshBasicMaterial({ map: signTexture(t, null, c), transparent: true, toneMapped: false, side: THREE.DoubleSide }));
       s.position.set(x, 3.45, z); this.root.add(s);

@@ -14,7 +14,7 @@ function roomAt(x, z) {
 }
 import { Avatar } from './characters.js';
 
-const AGENT_IDS = ['ceo', 'research', 'development', 'social'];
+const AGENT_IDS = Object.keys(DESKS);
 const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 

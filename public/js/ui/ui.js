@@ -7,7 +7,7 @@ import { markdown, esc } from './markdown.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const nameOf = (id) => (id === 'owner' ? 'You' : id === 'all' ? 'Everyone' : id === 'system' ? 'System' : agentById(id)?.name || id);
-const short = (id) => (id === 'owner' ? 'YOU' : id === 'system' ? 'SYS' : { ceo: 'CEO', research: 'RES', development: 'DEV', social: 'SOC' }[id] || '?');
+const short = (id) => (id === 'owner' ? 'YOU' : id === 'system' ? 'SYS' : { ceo: 'CEO', research: 'RES', development: 'DEV', social: 'SOC', security: 'SEC' }[id] || '?');
 const colorOf = (id) => (id === 'owner' ? '#e5e7eb' : id === 'system' ? '#f59e0b' : agentById(id)?.color || '#94a3b8');
 const time = (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 const ago = (t) => { const s = (Date.now() - t) / 1000; return s < 60 ? 'just now' : s < 3600 ? `${Math.floor(s / 60)}m ago` : s < 86400 ? `${Math.floor(s / 3600)}h ago` : new Date(t).toLocaleDateString(); };

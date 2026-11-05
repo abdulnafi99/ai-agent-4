@@ -45,6 +45,7 @@ export const config = {
     research: env.AGENT_MODEL_RESEARCH,
     development: env.AGENT_MODEL_DEVELOPMENT,
     social: env.AGENT_MODEL_SOCIAL,
+    security: env.AGENT_MODEL_SECURITY,
   },
   // Optional per-agent AI provider, e.g. AGENT_PROVIDER_RESEARCH=gemini.
   // Agents without one use the default provider above.
@@ -53,6 +54,7 @@ export const config = {
     research: env.AGENT_PROVIDER_RESEARCH?.toLowerCase(),
     development: env.AGENT_PROVIDER_DEVELOPMENT?.toLowerCase(),
     social: env.AGENT_PROVIDER_SOCIAL?.toLowerCase(),
+    security: env.AGENT_PROVIDER_SECURITY?.toLowerCase(),
   },
   anthropicEffort: env.ANTHROPIC_EFFORT || 'medium',
   openaiBaseUrl: env.OPENAI_BASE_URL || 'https://api.openai.com/v1',

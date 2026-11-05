@@ -86,6 +86,23 @@ export class Screen {
       ctx.fillStyle = '#f472b6'; ctx.font = '12px sans-serif'; ctx.fillText(`♥ ${(1200 + Math.floor(t * 7) + i * 311) % 9999}`, 72, y + 52);
     }
   }
+  security(t, W, H) {
+    const { ctx } = this;
+    ctx.fillStyle = '#0d0806'; ctx.fillRect(0, 0, W, H);
+    // radar sweep
+    const cx = W * 0.3; const cy = H * 0.55; const r = Math.min(W, H) * 0.36;
+    ctx.strokeStyle = 'rgba(251,146,60,.35)'; ctx.lineWidth = 1;
+    for (let k = 1; k <= 3; k++) { ctx.beginPath(); ctx.arc(cx, cy, (r * k) / 3, 0, Math.PI * 2); ctx.stroke(); }
+    const ang = t * 1.6;
+    ctx.fillStyle = 'rgba(251,146,60,.25)'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, ang, ang + 0.6); ctx.closePath(); ctx.fill();
+    const rr = rnd(this.seed);
+    for (let i = 0; i < 6; i++) { const a = rr() * 6.28; const d = rr() * r; ctx.fillStyle = i === 0 && Math.floor(t * 2) % 2 ? '#ef4444' : '#22c55e'; ctx.fillRect(cx + Math.cos(a) * d - 2, cy + Math.sin(a) * d - 2, 4, 4); }
+    // log lines
+    const lines = ['FW  allow 443/tcp', 'IDS scan blocked', 'AUTH mfa ok', 'WAF rule 942100', 'TLS 1.3 ok', 'IDS anomaly score 0.12'];
+    ctx.font = '10px monospace';
+    for (let i = 0; i < 7; i++) { const ln = lines[(Math.floor(t * 1.5) + i) % lines.length]; ctx.fillStyle = ln.includes('blocked') ? '#fb923c' : '#86efac'; ctx.fillText(ln, W * 0.58, 22 + i * 15); }
+    ctx.fillStyle = '#fed7aa'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('THREAT MONITOR', 10, 15);
+  }
   dashboard(t, W, H) {
     const { ctx } = this;
     ctx.fillStyle = '#04120d'; ctx.fillRect(0, 0, W, H);
