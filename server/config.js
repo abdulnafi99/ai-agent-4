@@ -50,7 +50,8 @@ export const config = {
   openaiBaseUrl: env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
 
   storage: env.STORAGE || (env.FIREBASE_SERVICE_ACCOUNT || env.GOOGLE_APPLICATION_CREDENTIALS ? 'firestore' : 'file'),
-  dataFile: env.DATA_FILE || path.join(ROOT, 'data', 'office.json'),
+  // Vercel's filesystem is read-only except /tmp (and /tmp is not durable).
+  dataFile: env.DATA_FILE || (env.VERCEL ? '/tmp/nafi-office.json' : path.join(ROOT, 'data', 'office.json')),
 
   // Auth: Firebase Auth when FIREBASE_WEB_CONFIG is set, otherwise an
   // optional shared owner key. With neither, the office runs open (dev).

@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "check": "node --check server/index.js && node scripts/smoke.js"
+    "check": "node --check server/index.js && node scripts/smoke.js",
+    "vendor": "node scripts/vendor-three.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.5.0",

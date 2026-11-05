@@ -85,7 +85,6 @@ export async function createApp() {
   });
 
   app.use('/api', api);
-  app.use('/vendor/three', express.static(path.join(ROOT, 'node_modules', 'three'), { maxAge: '7d', immutable: true }));
   app.use(express.static(path.join(ROOT, 'public'), { extensions: ['html'], maxAge: '1h' }));
 
   app.use((err, _req, res, _next) => {
@@ -94,8 +93,12 @@ export async function createApp() {
   return app;
 }
 
+// One app instance per process. Vercel imports this module and uses the
+// default export; `npm start` runs it directly and listens on PORT.
+const app = await createApp();
+export default app;
+
 if (process.argv[1] && path.resolve(process.argv[1]) === path.join(ROOT, 'server', 'index.js')) {
-  const app = await createApp();
   app.listen(config.port, () => {
     console.log(`\n  NAFI AI OFFICE running at http://localhost:${config.port}`);
     console.log(`  AI provider: ${config.provider}${config.provider === 'demo' ? ' (set ANTHROPIC_API_KEY for real inference)' : ''}`);
