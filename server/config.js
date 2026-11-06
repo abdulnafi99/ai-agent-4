@@ -21,6 +21,22 @@ if (fs.existsSync(envFile)) {
 }
 
 const env = process.env;
+
+// The NAFI AI Office Firebase project's web config. It is public by design
+// (it identifies the project; access is controlled by server credentials and
+// security rules). Override with FIREBASE_WEB_CONFIG.
+const DEFAULT_FIREBASE_WEB_CONFIG = {
+  apiKey: 'AIzaSyA_EtZFKp9VFfJx1R6mRqHI1dmoPJBDvr0',
+  authDomain: 'ai-agent-25973.firebaseapp.com',
+  databaseURL: 'https://ai-agent-25973-default-rtdb.asia-southeast1.firebasedatabase.app',
+  projectId: 'ai-agent-25973',
+  storageBucket: 'ai-agent-25973.firebasestorage.app',
+  messagingSenderId: '979163573432',
+  appId: '1:979163573432:web:fb771bb33b7c9d0200d84d',
+  measurementId: 'G-KG1FBFL07N',
+};
+const firebaseWebConfig = env.FIREBASE_WEB_CONFIG ? JSON.parse(env.FIREBASE_WEB_CONFIG) : DEFAULT_FIREBASE_WEB_CONFIG;
+const hasFirebaseCredentials = Boolean(env.FIREBASE_SERVICE_ACCOUNT || env.GOOGLE_APPLICATION_CREDENTIALS);
 const list = (v) => (v || '').split(',').map((s) => s.trim()).filter(Boolean);
 
 function detectProvider() {
@@ -59,13 +75,19 @@ export const config = {
   anthropicEffort: env.ANTHROPIC_EFFORT || 'medium',
   openaiBaseUrl: env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
 
-  storage: env.STORAGE || (env.FIREBASE_SERVICE_ACCOUNT || env.GOOGLE_APPLICATION_CREDENTIALS ? 'firestore' : 'file'),
+  // "rtdb" (Firebase Realtime Database), "firestore" or "file". Defaults to the
+  // Realtime Database whenever Firebase server credentials are configured.
+  storage: (env.STORAGE || (hasFirebaseCredentials ? 'rtdb' : 'file')).toLowerCase(),
+  firebaseDatabaseUrl: env.FIREBASE_DATABASE_URL || firebaseWebConfig.databaseURL || '',
   // Vercel's filesystem is read-only except /tmp (and /tmp is not durable).
   dataFile: env.DATA_FILE || (env.VERCEL ? '/tmp/nafi-office.json' : path.join(ROOT, 'data', 'office.json')),
 
-  // Auth: Firebase Auth when FIREBASE_WEB_CONFIG is set, otherwise an
-  // optional shared owner key. With neither, the office runs open (dev).
-  firebaseWebConfig: env.FIREBASE_WEB_CONFIG ? JSON.parse(env.FIREBASE_WEB_CONFIG) : null,
+  firebaseWebConfig,
+  // Auth: AUTH_MODE = "key" | "firebase" | "none". By default a shared
+  // OWNER_ACCESS_KEY wins; Firebase Auth is used when FIREBASE_WEB_CONFIG is
+  // set explicitly and no key is; otherwise the office runs open (dev only).
+  authMode: (env.AUTH_MODE || (env.OWNER_ACCESS_KEY ? 'key' : env.FIREBASE_WEB_CONFIG ? 'firebase' : 'none')).toLowerCase(),
+  analytics: env.FIREBASE_ANALYTICS !== 'false',
   firebaseServiceAccount: env.FIREBASE_SERVICE_ACCOUNT || null,
   ownerEmails: list(env.OWNER_EMAILS).map((e) => e.toLowerCase()),
   ownerKey: env.OWNER_ACCESS_KEY || '',
@@ -89,8 +111,9 @@ export function publicConfig() {
     provider: config.provider,
     demo: !usesAi,
     available: availableProviders(),
-    auth: config.firebaseWebConfig ? 'firebase' : config.ownerKey ? 'key' : 'none',
+    auth: config.authMode,
     firebase: config.firebaseWebConfig, // Firebase web config is public by design
+    analytics: config.analytics && Boolean(config.firebaseWebConfig?.measurementId),
     storage: config.storage,
   };
 }

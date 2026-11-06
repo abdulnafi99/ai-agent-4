@@ -22,7 +22,7 @@ export async function createApp() {
   });
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
-  app.get('/api/config', (_req, res) => res.json(publicConfig()));
+  app.get('/api/config', (_req, res) => res.json({ ...publicConfig(), storage: store.backend || config.storage }));
 
   const api = express.Router();
   api.use(requireAuth);

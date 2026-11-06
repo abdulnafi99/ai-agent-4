@@ -1,13 +1,16 @@
 // Persistent store for messages, tasks, projects, meetings, approvals and
 // activity. Data lives in memory for fast reads and is written through to a
-// persistence driver: a local JSON file (default) or Firebase Firestore.
+// persistence driver: Firebase Realtime Database, Firestore, or a local JSON
+// file. With the Realtime Database, changes made by other server instances
+// stream back in, so every instance (and every browser) sees the same office.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { config } from './config.js';
+import { firebaseDatabase, firebaseFirestore } from './firebase.js';
 
 export const COLLECTIONS = ['messages', 'tasks', 'projects', 'activity', 'approvals', 'meetings', 'documents', 'agents', 'settings'];
-// Keep long-lived history bounded in memory; older items stay in Firestore.
+// Keep long-lived history bounded in memory; older items stay in the database.
 const LIMITS = { messages: 2000, activity: 1500, documents: 500, meetings: 200 };
 
 export const uid = (prefix) => `${prefix}_${Date.now().toString(36)}${crypto.randomBytes(3).toString('hex')}`;
@@ -33,15 +36,7 @@ class FileDriver {
 
 class FirestoreDriver {
   async init() {
-    const admin = (await import('firebase-admin')).default;
-    if (!admin.apps.length) {
-      const sa = config.firebaseServiceAccount;
-      const credential = sa
-        ? admin.credential.cert(sa.trim().startsWith('{') ? JSON.parse(sa) : JSON.parse(fs.readFileSync(sa, 'utf8')))
-        : admin.credential.applicationDefault();
-      admin.initializeApp({ credential });
-    }
-    this.db = admin.firestore();
+    this.db = await firebaseFirestore();
     this.root = this.db.collection('nafiOffice').doc('workspace');
   }
   async load() {
@@ -71,23 +66,93 @@ class FirestoreDriver {
   }
 }
 
+const withTimeout = (p, ms, msg) => Promise.race([p, new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms).unref())]);
+
+// Firebase Realtime Database: /nafiOffice/<collection>/<id>.
+class RtdbDriver {
+  async load() {
+    if (!config.firebaseDatabaseUrl) throw new Error('FIREBASE_DATABASE_URL is not set');
+    if (!config.firebaseServiceAccount && !process.env.GOOGLE_APPLICATION_CREDENTIALS) throw new Error('FIREBASE_SERVICE_ACCOUNT is not set');
+    return withTimeout(this.loadAll(), 15000, 'Realtime Database did not respond in 15 s (check FIREBASE_SERVICE_ACCOUNT and the database URL)');
+  }
+  async loadAll() {
+    this.db = await firebaseDatabase();
+    this.root = this.db.ref('nafiOffice');
+    const out = {};
+    for (const col of COLLECTIONS) {
+      let q = this.root.child(col);
+      if (LIMITS[col]) q = q.orderByChild('createdAt').limitToLast(LIMITS[col]);
+      const snap = await q.once('value');
+      const docs = [];
+      snap.forEach((child) => { docs.push(child.val()); });
+      out[col] = docs.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    }
+    return out;
+  }
+  // The database rejects undefined values; JSON round-trip drops them.
+  write(col, doc) {
+    this.root.child(col).child(doc.id).set(JSON.parse(JSON.stringify(doc))).catch((e) => console.error('[rtdb] write failed', e.message));
+  }
+  remove(col, id) { this.root.child(col).child(id).remove().catch(() => {}); }
+  async clear() { await this.root.remove(); }
+  // Stream changes written by other instances from now on.
+  subscribe(onDoc) {
+    const since = Date.now();
+    for (const col of COLLECTIONS) {
+      const q = this.root.child(col).orderByChild('updatedAt').startAt(since);
+      const handle = (snap) => { const v = snap.val(); if (v && v.id) onDoc(col, v); };
+      q.on('child_added', handle);
+      q.on('child_changed', handle);
+    }
+  }
+}
+
+// The Realtime Database drops empty arrays/objects; restore the shapes the app expects.
+function normalise(col, doc) {
+  if (!doc || typeof doc !== 'object') return doc;
+  if (col === 'meetings') { doc.transcript ||= []; doc.participants ||= []; }
+  if (col === 'settings') doc.agents ||= {};
+  if (col === 'agents') { doc.responsibilities ||= []; doc.stats ||= {}; }
+  return doc;
+}
+
 class Store {
   constructor() {
     this.data = Object.fromEntries(COLLECTIONS.map((c) => [c, []]));
     this.listeners = new Set();
   }
   async init() {
-    this.driver = config.storage === 'firestore' ? new FirestoreDriver() : new FileDriver(config.dataFile);
+    this.driver = config.storage === 'rtdb' ? new RtdbDriver()
+      : config.storage === 'firestore' ? new FirestoreDriver()
+        : new FileDriver(config.dataFile);
     try {
       const loaded = await this.driver.load();
-      for (const c of COLLECTIONS) if (Array.isArray(loaded[c])) this.data[c] = loaded[c];
+      for (const c of COLLECTIONS) if (Array.isArray(loaded[c])) this.data[c] = loaded[c].map((d) => normalise(c, d));
+      this.driver.subscribe?.((col, doc) => this.applyRemote(col, doc));
+      this.backend = config.storage;
     } catch (e) {
+      this.backend = 'file';
       console.error(`[store] ${config.storage} unavailable (${e.message}); falling back to local file`);
       this.driver = new FileDriver(config.dataFile);
       const loaded = await this.driver.load();
       for (const c of COLLECTIONS) if (Array.isArray(loaded[c])) this.data[c] = loaded[c];
     }
   }
+  // A document changed in the database by another instance.
+  applyRemote(col, doc) {
+    doc = normalise(col, doc);
+    const local = this.get(col, doc.id);
+    if (local && (local.updatedAt || 0) >= (doc.updatedAt || 0)) return; // our own write, or older
+    if (local) { Object.assign(local, doc); this.emit('update', col, local); }
+    else {
+      this.data[col].push(doc);
+      this.data[col].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      const limit = LIMITS[col];
+      if (limit && this.data[col].length > limit) this.data[col].splice(0, this.data[col].length - limit);
+      this.emit('insert', col, doc);
+    }
+  }
+
   snapshot() { return this.data; }
   onChange(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
   emit(type, col, doc) { for (const fn of this.listeners) fn({ type, col, doc }); }
