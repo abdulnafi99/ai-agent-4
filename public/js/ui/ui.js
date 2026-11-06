@@ -192,7 +192,7 @@ const views = {
       return `
       <div class="section-title">AI provider</div>
       <div class="card"><div class="meta">Default provider</div><h3>${esc(PROVIDER_LABEL[c.provider] || c.provider)}${c.demo ? ' <span class="badge warn">Demo mode</span>' : ' <span class="badge ok">Live inference</span>'}</h3>
-        <div class="meta">Storage: ${esc(c.storage)} · Auth: ${esc(c.auth)} · Keys set: ${esc((c.available || []).map((p) => PROVIDER_LABEL[p]).join(', ') || 'none')}</div>
+        <div class="meta">Storage: ${esc({ rtdb: 'Firebase Realtime Database', firestore: 'Firestore', file: 'Server file (not durable on Vercel)' }[c.storage] || c.storage)} · Auth: ${esc(c.auth)} · Keys set: ${esc((c.available || []).map((p) => PROVIDER_LABEL[p]).join(', ') || 'none')}</div>
         ${state.agents.map((a) => `<div class="meta" style="margin-top:4px"><b style="color:var(--text)">${esc(a.name)}</b> → ${esc(aiOf(a.id))}</div>`).join('')}
         <p class="muted" style="font-size:12px;margin:8px 0 0">API keys are configured on the server and never sent to the browser. Each agent can use a different AI below; that provider's key must be set on the server.</p></div>
       <div class="section-title">Autonomy</div>

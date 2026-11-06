@@ -78,16 +78,16 @@ See `.env.example` for every option.
 |---|---|
 | AI provider | `ANTHROPIC_API_KEY` (default model `claude-opus-5-5`, with server-side refusal fallback), `OPENAI_API_KEY` (default `gpt-5-mini`, + `OPENAI_BASE_URL` for any OpenAI-compatible endpoint), `GEMINI_API_KEY` (default `gemini-2.5-flash`) |
 | Per-agent AI | Each agent can use a different provider: `AGENT_PROVIDER_RESEARCH=gemini`, `AGENT_PROVIDER_SOCIAL=openai`, `AGENT_PROVIDER_SECURITY=…`, and so on, or choose it in Settings. Agents without one use the default provider. `AGENT_MODEL_*` overrides the model. |
-| Storage | `STORAGE=file` (default, `data/office.json`) or `STORAGE=firestore` with `FIREBASE_SERVICE_ACCOUNT` |
-| Auth | Firebase Authentication (`FIREBASE_WEB_CONFIG` + `OWNER_EMAILS`, with ID tokens verified on the server), or a shared `OWNER_ACCESS_KEY`. With neither set, the office is open, which is for local development only. |
+| Storage | `STORAGE=rtdb` (Firebase Realtime Database, the default whenever `FIREBASE_SERVICE_ACCOUNT` is set), `firestore`, or `file` (default without Firebase credentials, `data/office.json`). With the Realtime Database, changes from other server instances stream back in, so every instance and browser sees the same office. |
+| Auth | `AUTH_MODE` = `key` (shared `OWNER_ACCESS_KEY`, the default when it is set), `firebase` (Firebase Authentication with ID tokens verified on the server, plus `OWNER_EMAILS`) or `none` (local development only). |
 
-**Security:** AI provider keys are read only by the server and are never sent to the browser. Browsers never talk to Firestore directly: `firestore.rules` denies all client access, and the server uses `firebase-admin`. All model output is HTML-escaped before it is rendered. The live event stream (Server-Sent Events) passes the auth token as a query parameter, because `EventSource` cannot set headers, so serve the app over HTTPS in production.
+**Security:** AI provider keys are read only by the server and are never sent to the browser. Browsers never talk to the database directly: `database.rules.json` and `firestore.rules` deny all client access, and the server uses `firebase-admin` with a service account. The Firebase web config in `server/config.js` is public by design; the service account key is secret and lives only in the server's environment. All model output is HTML-escaped before it is rendered. The live event stream (Server-Sent Events) passes the auth token as a query parameter, because `EventSource` cannot set headers, so serve the app over HTTPS in production.
 
 ## Deploying
 
 - **Vercel:** the repository deploys as-is (Express preset). Set `OWNER_ACCESS_KEY` and, for real AI, `ANTHROPIC_API_KEY` in the project's environment variables. Vercel runs the app as a function it can pause or recycle, so history in `/tmp` isn't durable (use `STORAGE=firestore`), and agents only keep working while someone has the page open.
 - **Any Node host / Cloud Run:** `docker build -t nafi-office . && docker run -p 8080:8080 --env-file .env nafi-office`
-- **Firestore:** create a Firebase project, enable Firestore and Authentication, download a service-account key, set `STORAGE=firestore`, `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_WEB_CONFIG` and `OWNER_EMAILS`, then run `firebase deploy --only firestore:rules`.
+- **Firebase Realtime Database:** in the Firebase console, generate a service-account key (Project settings → Service accounts) and set it as `FIREBASE_SERVICE_ACCOUNT` on the server. Publish `database.rules.json` (Realtime Database → Rules, or `firebase deploy --only database`): it blocks browser access and adds the `createdAt`/`updatedAt` indexes the server queries.
 
 ## Project structure
 

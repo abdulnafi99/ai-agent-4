@@ -7,6 +7,21 @@ import { initUI, openView, openMeetingDialog, toast } from './ui/ui.js';
 const $ = (s) => document.querySelector(s);
 const loaderText = (t) => { $('#loader-text').textContent = t; };
 
+const FIREBASE_SDK = '10.14.1';
+
+// The default Firebase web app (shared by Auth and Analytics).
+async function firebaseApp(cfg) {
+  const { initializeApp, getApps, getApp } = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK}/firebase-app.js`);
+  return getApps().length ? getApp() : initializeApp(cfg);
+}
+
+// Firebase Analytics (Google Analytics) for page views; never blocks the office.
+async function startAnalytics(cfg) {
+  const an = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK}/firebase-analytics.js`);
+  if (!(await an.isSupported())) return;
+  an.getAnalytics(await firebaseApp(cfg));
+}
+
 async function authenticate(config) {
   if (config.auth === 'none') return;
   const login = $('#login');
@@ -33,10 +48,8 @@ async function authenticate(config) {
   }
 
   // Firebase Authentication
-  const v = '10.14.1';
-  const { initializeApp } = await import(`https://www.gstatic.com/firebasejs/${v}/firebase-app.js`);
-  const fa = await import(`https://www.gstatic.com/firebasejs/${v}/firebase-auth.js`);
-  const app = initializeApp(config.firebase);
+  const fa = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK}/firebase-auth.js`);
+  const app = await firebaseApp(config.firebase);
   const auth = fa.getAuth(app);
   setTokenProvider(async () => (auth.currentUser ? auth.currentUser.getIdToken() : ''));
   return new Promise((resolve) => {
@@ -69,6 +82,7 @@ async function start() {
   badge.title = config.demo ? 'No AI provider key configured on the server: agents use templated demo responses. Set ANTHROPIC_API_KEY for real inference.' : 'Agents run real AI inference';
 
   await authenticate(config);
+  if (config.analytics && config.firebase) startAnalytics(config.firebase).catch((e) => console.warn('Analytics unavailable:', e.message));
   loaderText('Loading workspace…');
   load(await api('/state'));
 
